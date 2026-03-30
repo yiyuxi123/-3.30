@@ -1,0 +1,146 @@
+import React, { useState } from 'react';
+import { useStore } from '../store/useStore';
+import { format, isSameMonth, parseISO } from 'date-fns';
+import * as Icons from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
+import TransactionDetailModal from '../components/TransactionDetailModal';
+import { Transaction } from '../types';
+
+export default function Transactions() {
+  const { transactions, categories, accounts } = useStore();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
+  const filteredTransactions = transactions.filter(t => {
+    const matchesSearch = t.note.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || t.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  // Group by month
+  const grouped = filteredTransactions.reduce((acc, t) => {
+    const month = format(parseISO(t.date), 'yyyy-MM');
+    if (!acc[month]) acc[month] = [];
+    acc[month].push(t);
+    return acc;
+  }, {} as Record<string, typeof transactions>);
+
+  return (
+    <div className="p-4 space-y-6 max-w-md mx-auto">
+      {/* Header */}
+      <header className="sticky top-0 bg-gray-50/80 backdrop-blur-md z-10 pt-4 pb-2">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">账单明细</h1>
+        
+        {/* Search & Filter */}
+        <div className="flex space-x-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="搜索备注或分类..." 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+            />
+          </div>
+          <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center justify-center">
+            <Filter size={18} />
+          </button>
+        </div>
+
+        {/* Type Tabs */}
+        <div className="flex space-x-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+          {(['all', 'expense', 'income', 'transfer'] as const).map(type => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                filterType === type 
+                  ? 'bg-gray-900 text-white shadow-sm' 
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              {type === 'all' ? '全部' : type === 'expense' ? '支出' : type === 'income' ? '收入' : '转账'}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Transactions List */}
+      <div className="space-y-6">
+        {Object.entries(grouped).length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search size={24} className="text-gray-300" />
+            </div>
+            <p>没有找到相关记录</p>
+          </div>
+        ) : (
+          Object.entries(grouped).map(([month, monthTransactions]) => {
+            const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+            const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+
+            return (
+              <div key={month} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* Month Header */}
+                <div className="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-100">
+                  <h3 className="font-bold text-gray-900">{format(parseISO(`${month}-01`), 'yyyy年MM月')}</h3>
+                  <div className="text-xs text-gray-500 flex space-x-3">
+                    <span>支 ¥{monthExpense.toFixed(2)}</span>
+                    <span>收 ¥{monthIncome.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Items */}
+                <div className="divide-y divide-gray-50">
+                  {monthTransactions.map(t => {
+                    const category = categories.find(c => c.id === t.categoryId);
+                    const IconComponent = category ? (Icons as any)[category.icon] : Icons.ArrowRightLeft;
+                    const fromAccount = accounts.find(a => a.id === t.fromAccountId);
+                    const toAccount = accounts.find(a => a.id === t.toAccountId);
+                    
+                    return (
+                      <div 
+                        key={t.id} 
+                        className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => setSelectedTx(t)}
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div 
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white"
+                            style={{ backgroundColor: t.type === 'transfer' ? '#6b7280' : category?.color || '#9ca3af' }}
+                          >
+                            {IconComponent && <IconComponent size={20} />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {t.type === 'transfer' ? '转账' : category?.name || '未知'}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {format(parseISO(t.date), 'MM-dd HH:mm')}
+                              {t.type === 'transfer' && fromAccount && toAccount && ` | ${fromAccount.name} -> ${toAccount.name}`}
+                              {t.type !== 'transfer' && fromAccount && ` | ${fromAccount.name}`}
+                              {t.type !== 'transfer' && toAccount && ` | ${toAccount.name}`}
+                              {t.note && ` | ${t.note}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={`font-bold ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
+                          {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}¥{t.amount.toFixed(2)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {selectedTx && <TransactionDetailModal transaction={selectedTx} onClose={() => setSelectedTx(null)} />}
+    </div>
+  );
+}
