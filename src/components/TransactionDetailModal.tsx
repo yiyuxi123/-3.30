@@ -50,6 +50,9 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
             <p className="text-gray-500 font-medium mb-2 flex items-center space-x-1">
               <Tag size={14} />
               <span>{transaction.type === 'transfer' ? '转账' : category?.name || '未知分类'}</span>
+              {transaction.isReimbursable && (
+                <span className="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium">可报销</span>
+              )}
             </p>
             <h3 className={`text-5xl font-bold tracking-tight ${typeColor}`}>
               {sign}¥{transaction.amount.toFixed(2)}
@@ -97,7 +100,7 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
 
             {transaction.note && (
               <div className="flex justify-between items-start pt-3 mt-3 border-t border-gray-200/60">
-                <div className="flex items-center space-x-2 text-gray-500 mt-0.5">
+                <div className="flex items-center space-x-2 text-gray-500 mt-0.5 shrink-0">
                   <AlignLeft size={18} />
                   <span className="text-sm">备注</span>
                 </div>

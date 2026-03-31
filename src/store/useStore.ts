@@ -34,6 +34,7 @@ const initialCategories: Category[] = [
   { id: '4', name: '居住', type: 'expense', icon: 'Home', color: '#10b981' },
   { id: '5', name: '工资', type: 'income', icon: 'Wallet', color: '#10b981' },
   { id: '6', name: '理财', type: 'income', icon: 'TrendingUp', color: '#8b5cf6' },
+  { id: '7', name: '报销款', type: 'income', icon: 'Receipt', color: '#f59e0b' },
 ];
 
 const initialAccounts: Account[] = [

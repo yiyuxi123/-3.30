@@ -13,6 +13,7 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
   const [toAccountId, setToAccountId] = useState('');
   const [note, setNote] = useState('');
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+  const [isReimbursable, setIsReimbursable] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +35,8 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
 
+    const selectedCategory = categories.find(c => c.id === categoryId);
+
     addTransaction({
       type,
       amount: Number(amount),
@@ -41,12 +44,14 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
       categoryId: type !== 'transfer' ? categoryId : undefined,
       fromAccountId: type !== 'income' ? fromAccountId : undefined,
       toAccountId: type !== 'expense' ? toAccountId : undefined,
-      note
+      note,
+      isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined
     });
     onClose();
   };
 
   const filteredCategories = categories.filter(c => c.type === type);
+  const selectedCategory = categories.find(c => c.id === categoryId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm transition-opacity">
@@ -190,6 +195,22 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
               />
             </div>
           </div>
+
+          {/* Reimbursable Checkbox */}
+          {type === 'expense' && selectedCategory?.name === '交通' && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="reimbursable"
+                checked={isReimbursable}
+                onChange={(e) => setIsReimbursable(e.target.checked)}
+                className="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="reimbursable" className="text-sm font-medium text-gray-700">
+                可报销
+              </label>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button 

@@ -26,6 +26,7 @@ export interface Transaction {
   fromAccountId?: string; // For expense/transfer
   toAccountId?: string; // For income/transfer
   note: string;
+  isReimbursable?: boolean;
 }
 
 export interface Budget {
