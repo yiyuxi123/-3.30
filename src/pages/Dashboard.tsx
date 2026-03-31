@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Wallet, TrendingDown, TrendingUp, ChevronRight } from 'lucide-react';
+import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import EditBudgetModal from '../components/EditBudgetModal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { Transaction } from '../types';
 
 export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
-  const { transactions, accounts, budgets, categories } = useStore();
+  const { transactions, accounts, budgets, categories, showReimbursables, toggleShowReimbursables } = useStore();
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
@@ -16,7 +16,21 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const start = startOfMonth(now);
   const end = endOfMonth(now);
 
-  const currentMonthTransactions = transactions.filter(t => {
+  const isReimbursableTx = (t: Transaction) => {
+    if (t.type === 'expense' && t.isReimbursable) return true;
+    if (t.type === 'income') {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (cat?.name === '报销款') return true;
+    }
+    return false;
+  };
+
+  const filteredTransactions = transactions.filter(t => {
+    if (!showReimbursables && isReimbursableTx(t)) return false;
+    return true;
+  });
+
+  const currentMonthTransactions = filteredTransactions.filter(t => {
     const d = new Date(t.date);
     return isWithinInterval(d, { start, end });
   });
@@ -34,7 +48,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const budgetRemaining = totalBudget - expense;
   const budgetPercent = totalBudget > 0 ? (expense / totalBudget) * 100 : 0;
 
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions = filteredTransactions.slice(0, 5);
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
@@ -44,8 +58,21 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <h1 className="text-2xl font-bold text-gray-900">记账本</h1>
           <p className="text-sm text-gray-500">{format(now, 'yyyy年MM月')}</p>
         </div>
-        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-          <Wallet size={20} />
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={toggleShowReimbursables}
+            className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              showReimbursables 
+                ? 'bg-emerald-100 text-emerald-700' 
+                : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            {showReimbursables ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>{showReimbursables ? '含报销' : '不含报销'}</span>
+          </button>
+          <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+            <Wallet size={20} />
+          </div>
         </div>
       </header>
 

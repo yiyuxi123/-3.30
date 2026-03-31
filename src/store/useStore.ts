@@ -25,6 +25,9 @@ interface AppState {
   addBudget: (budget: Omit<Budget, 'id'>) => void;
   updateBudget: (id: string, budget: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
+
+  showReimbursables: boolean;
+  toggleShowReimbursables: () => void;
 }
 
 const initialCategories: Category[] = [
@@ -53,6 +56,9 @@ export const useStore = create<AppState>()(
       budgets: [
         { id: '1', amount: 5000, period: 'monthly' } // Default total monthly budget
       ],
+      showReimbursables: true,
+
+      toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
 
       addTransaction: (transaction) =>
         set((state) => {

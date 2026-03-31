@@ -2,19 +2,30 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { format, isSameMonth, parseISO } from 'date-fns';
 import * as Icons from 'lucide-react';
-import { Filter, Search, List, Calendar as CalendarIcon } from 'lucide-react';
+import { Filter, Search, List, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import TransactionCalendar from '../components/TransactionCalendar';
 import { Transaction } from '../types';
 
 export default function Transactions() {
-  const { transactions, categories, accounts } = useStore();
+  const { transactions, categories, accounts, showReimbursables, toggleShowReimbursables } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
+  const isReimbursableTx = (t: Transaction) => {
+    if (t.type === 'expense' && t.isReimbursable) return true;
+    if (t.type === 'income') {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (cat?.name === '报销款') return true;
+    }
+    return false;
+  };
+
   const filteredTransactions = transactions.filter(t => {
+    if (!showReimbursables && isReimbursableTx(t)) return false;
+    
     const matchesSearch = t.note.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || t.type === filterType;
@@ -35,19 +46,32 @@ export default function Transactions() {
       <header className="sticky top-0 bg-gray-50/80 backdrop-blur-md z-10 pt-4 pb-2">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-gray-900">账单明细</h1>
-          <div className="flex bg-gray-200 p-1 rounded-xl">
+          <div className="flex items-center space-x-3">
             <button 
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              onClick={toggleShowReimbursables}
+              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                showReimbursables 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : 'bg-gray-100 text-gray-500'
+              }`}
             >
-              <List size={18} />
+              {showReimbursables ? <Eye size={14} /> : <EyeOff size={14} />}
+              <span>{showReimbursables ? '含报销' : '不含报销'}</span>
             </button>
-            <button 
-              onClick={() => setViewMode('calendar')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'calendar' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              <CalendarIcon size={18} />
-            </button>
+            <div className="flex bg-gray-200 p-1 rounded-xl">
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <List size={18} />
+              </button>
+              <button 
+                onClick={() => setViewMode('calendar')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'calendar' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                <CalendarIcon size={18} />
+              </button>
+            </div>
           </div>
         </div>
         

@@ -20,10 +20,24 @@ import TransactionDetailModal from './TransactionDetailModal';
 import { Transaction } from '../types';
 
 export default function TransactionCalendar() {
-  const { transactions, categories, accounts } = useStore();
+  const { transactions, categories, accounts, showReimbursables } = useStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
+  const isReimbursableTx = (t: Transaction) => {
+    if (t.type === 'expense' && t.isReimbursable) return true;
+    if (t.type === 'income') {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (cat?.name === '报销款') return true;
+    }
+    return false;
+  };
+
+  const filteredTransactions = transactions.filter(t => {
+    if (!showReimbursables && isReimbursableTx(t)) return false;
+    return true;
+  });
 
   const daysInMonth = eachDayOfInterval({
     start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }),
@@ -34,7 +48,7 @@ export default function TransactionCalendar() {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
   // Get transactions for the selected day
-  const selectedDayTransactions = transactions.filter(t => 
+  const selectedDayTransactions = filteredTransactions.filter(t => 
     isSameDay(parseISO(t.date), selectedDate)
   );
 
@@ -74,7 +88,7 @@ export default function TransactionCalendar() {
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-1">
           {daysInMonth.map((day, idx) => {
-            const dayTransactions = transactions.filter(t => isSameDay(parseISO(t.date), day));
+            const dayTransactions = filteredTransactions.filter(t => isSameDay(parseISO(t.date), day));
             const expense = dayTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
             const income = dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
             
