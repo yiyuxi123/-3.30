@@ -128,7 +128,14 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                             <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium shrink-0">可报销</span>
                           )}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">{format(new Date(t.date), 'MM-dd HH:mm')} {t.note && `| ${t.note}`}</p>
+                        <div className="mt-0.5 flex flex-col space-y-1">
+                          <p className="text-xs text-gray-500 truncate">{format(new Date(t.date), 'MM-dd HH:mm')}</p>
+                          {t.note && (
+                            <p className="text-xs text-gray-600 truncate bg-gray-100/80 px-1.5 py-0.5 rounded w-fit max-w-full">
+                              {t.note}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className={`font-bold shrink-0 ml-4 ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>

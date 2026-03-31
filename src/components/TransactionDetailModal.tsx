@@ -99,12 +99,14 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
             )}
 
             {transaction.note && (
-              <div className="flex justify-between items-start pt-3 mt-3 border-t border-gray-200/60">
-                <div className="flex items-center space-x-2 text-gray-500 mt-0.5 shrink-0">
+              <div className="pt-3 mt-3 border-t border-gray-200/60">
+                <div className="flex items-center space-x-2 text-gray-500 mb-2">
                   <AlignLeft size={18} />
                   <span className="text-sm">备注</span>
                 </div>
-                <span className="text-gray-900 font-medium text-right max-w-[60%] break-words">{transaction.note}</span>
+                <div className="bg-white p-3 rounded-xl border border-gray-100 text-gray-900 text-sm leading-relaxed break-words shadow-sm">
+                  {transaction.note}
+                </div>
               </div>
             )}
           </div>
