@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { X, Check, Mic } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { Transaction } from '../types';
 
-export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const { categories, accounts, addTransaction } = useStore();
+export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction }) {
+  const { categories, accounts, addTransaction, updateTransaction } = useStore();
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -17,27 +18,38 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
 
   useEffect(() => {
     if (isOpen) {
-      // Set defaults
-      const defaultExpenseCat = categories.find(c => c.type === 'expense');
-      const defaultIncomeCat = categories.find(c => c.type === 'income');
-      const defaultAccount = accounts[0];
-      
-      if (type === 'expense' && defaultExpenseCat) setCategoryId(defaultExpenseCat.id);
-      if (type === 'income' && defaultIncomeCat) setCategoryId(defaultIncomeCat.id);
-      if (defaultAccount) setFromAccountId(defaultAccount.id);
-      if (accounts.length > 1) setToAccountId(accounts[1].id);
+      if (initialTransaction) {
+        setType(initialTransaction.type);
+        setAmount(initialTransaction.amount.toString());
+        setCategoryId(initialTransaction.categoryId || '');
+        setFromAccountId(initialTransaction.fromAccountId || '');
+        setToAccountId(initialTransaction.toAccountId || '');
+        setNote(initialTransaction.note || '');
+        setDate(format(parseISO(initialTransaction.date), "yyyy-MM-dd'T'HH:mm"));
+        setIsReimbursable(initialTransaction.isReimbursable || false);
+      } else {
+        // Set defaults
+        const defaultExpenseCat = categories.find(c => c.type === 'expense');
+        const defaultIncomeCat = categories.find(c => c.type === 'income');
+        const defaultAccount = accounts[0];
+        
+        if (type === 'expense' && defaultExpenseCat) setCategoryId(defaultExpenseCat.id);
+        if (type === 'income' && defaultIncomeCat) setCategoryId(defaultIncomeCat.id);
+        if (defaultAccount) setFromAccountId(defaultAccount.id);
+        if (accounts.length > 1) setToAccountId(accounts[1].id);
+      }
     }
-  }, [isOpen, type, categories, accounts]);
+  }, [isOpen, initialTransaction, type, categories, accounts]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
 
     const selectedCategory = categories.find(c => c.id === categoryId);
 
-    addTransaction({
+    const txData = {
       type,
       amount: Number(amount),
       date: new Date(date).toISOString(),
@@ -46,19 +58,49 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
       toAccountId: type !== 'expense' ? toAccountId : undefined,
       note,
       isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined
-    });
+    };
+
+    if (initialTransaction) {
+      updateTransaction(initialTransaction.id, txData);
+    } else {
+      addTransaction(txData);
+    }
     onClose();
   };
 
   const filteredCategories = categories.filter(c => c.type === type);
   const selectedCategory = categories.find(c => c.id === categoryId);
 
+  const handleNumberClick = (num: string) => {
+    if (num === '.' && amount.includes('.')) return;
+    if (amount === '0' && num !== '.') {
+      setAmount(num);
+    } else {
+      // Limit to 2 decimal places
+      if (amount.includes('.')) {
+        const [, decimal] = amount.split('.');
+        if (decimal && decimal.length >= 2) return;
+      }
+      setAmount(prev => prev + num);
+    }
+  };
+
+  const handleDelete = () => {
+    setAmount(prev => prev.slice(0, -1));
+  };
+
+  const handleClear = () => {
+    setAmount('');
+  };
+
+  const [showNumpad, setShowNumpad] = useState(false);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm transition-opacity">
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
+      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300 max-h-[90vh] flex flex-col">
         
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-gray-100">
+        <div className="flex justify-between items-center p-4 border-b border-gray-100 shrink-0">
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
             <X size={24} />
           </button>
@@ -82,21 +124,17 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           
           {/* Amount Input */}
-          <div className="flex items-center border-b-2 border-emerald-500 py-2">
+          <div 
+            className="flex items-center border-b-2 border-emerald-500 py-2 cursor-pointer"
+            onClick={() => setShowNumpad(true)}
+          >
             <span className="text-3xl font-bold text-gray-900 mr-2">¥</span>
-            <input 
-              type="number" 
-              step="0.01"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full text-4xl font-bold text-gray-900 focus:outline-none placeholder-gray-300 bg-transparent"
-              autoFocus
-              required
-            />
+            <div className={`w-full text-4xl font-bold ${amount ? 'text-gray-900' : 'text-gray-300'}`}>
+              {amount || '0.00'}
+            </div>
           </div>
 
           {/* Categories Grid */}
@@ -214,13 +252,45 @@ export default function AddTransactionModal({ isOpen, onClose }: { isOpen: boole
 
           {/* Submit Button */}
           <button 
-            type="submit"
+            onClick={handleSubmit}
             className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-colors flex items-center justify-center space-x-2"
           >
             <Check size={20} />
             <span>保存记录</span>
           </button>
-        </form>
+        </div>
+
+        {/* Custom Numpad */}
+        {showNumpad && (
+          <div className="bg-gray-50 border-t border-gray-200 p-4 shrink-0 animate-in slide-in-from-bottom-10">
+            <div className="grid grid-cols-4 gap-2">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0'].map(num => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleNumberClick(num)}
+                  className={`bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100 ${num === '0' ? 'col-span-2' : ''}`}
+                >
+                  {num}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="bg-gray-200 text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-300 flex items-center justify-center"
+              >
+                <Icons.Delete size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowNumpad(false)}
+                className="col-span-4 bg-emerald-500 text-white text-lg font-bold py-3 rounded-xl shadow-sm active:bg-emerald-600"
+              >
+                完成
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

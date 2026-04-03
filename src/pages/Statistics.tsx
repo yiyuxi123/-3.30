@@ -45,6 +45,22 @@ export default function Statistics() {
 
   const barData = Object.values(dailyData).sort((a, b) => Number(a.name) - Number(b.name));
 
+  // Fixed vs Variable data
+  const fixedData = filteredTransactions.reduce((acc, t) => {
+    const cat = categories.find(c => c.id === t.categoryId);
+    if (cat?.isFixed) {
+      acc.fixed += t.amount;
+    } else {
+      acc.variable += t.amount;
+    }
+    return acc;
+  }, { fixed: 0, variable: 0 });
+
+  const fixedVsVariableChartData = [
+    { name: '固定支出', value: fixedData.fixed, color: '#3b82f6' },
+    { name: '浮动支出', value: fixedData.variable, color: '#f59e0b' }
+  ].filter(d => d.value > 0);
+
   // Insights calculations
   const maxCategory = chartData.length > 0 ? chartData[0] : null;
   const maxDay = barData.length > 0 ? barData.reduce((max, d) => d.value > max.value ? d : max, barData[0]) : null;
@@ -187,6 +203,45 @@ export default function Statistics() {
       ) : (
         <div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center text-gray-400">
           暂无数据
+        </div>
+      )}
+
+      {/* Fixed vs Variable Chart */}
+      {type === 'expense' && fixedVsVariableChartData.length > 0 && (
+        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">固定 vs 浮动支出</h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={fixedVsVariableChartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={60}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {fixedVsVariableChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number) => `¥${value.toFixed(2)}`}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex justify-center space-x-6 mt-2">
+            {fixedVsVariableChartData.map((item, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                <span className="text-sm text-gray-600">{item.name}</span>
+                <span className="text-sm font-bold text-gray-900">¥{item.value.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

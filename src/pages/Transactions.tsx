@@ -165,6 +165,9 @@ export default function Transactions() {
                                 {t.isReimbursable && (
                                   <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium shrink-0">可报销</span>
                                 )}
+                                {category?.isFixed && t.type === 'expense' && (
+                                  <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-sm font-medium shrink-0">固定</span>
+                                )}
                               </p>
                               <div className="mt-0.5 flex flex-col space-y-1">
                                 <p className="text-xs text-gray-500 truncate">

@@ -43,6 +43,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const currentDay = now.getDate();
+  const dailyAverage = expense / currentDay;
+
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
   const totalBudget = budgets.find(b => !b.categoryId)?.amount || 0;
   const budgetRemaining = totalBudget - expense;
@@ -84,6 +87,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <span className="text-sm font-medium">本月支出</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">¥{expense.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-1">日均 ¥{dailyAverage.toFixed(2)}</p>
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center space-x-2 text-gray-500 mb-2">

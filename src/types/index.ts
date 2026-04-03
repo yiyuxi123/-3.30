@@ -6,6 +6,7 @@ export interface Category {
   type: 'expense' | 'income';
   icon: string;
   color: string;
+  isFixed?: boolean;
 }
 
 export interface Account {
@@ -15,6 +16,15 @@ export interface Account {
   balance: number;
   color: string;
   icon: string;
+}
+
+export interface TransactionHistory {
+  date: string;
+  changes: {
+    field: string;
+    oldValue: any;
+    newValue: any;
+  }[];
 }
 
 export interface Transaction {
@@ -27,6 +37,7 @@ export interface Transaction {
   toAccountId?: string; // For income/transfer
   note: string;
   isReimbursable?: boolean;
+  history?: TransactionHistory[];
 }
 
 export interface Budget {

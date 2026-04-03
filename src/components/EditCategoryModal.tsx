@@ -29,6 +29,7 @@ export default function EditCategoryModal({
   const [name, setName] = useState(category?.name || '');
   const [color, setColor] = useState(category?.color || COLORS[0]);
   const [icon, setIcon] = useState(category?.icon || AVAILABLE_ICONS[0]);
+  const [isFixed, setIsFixed] = useState(category?.isFixed || false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const isNew = !category;
@@ -38,9 +39,9 @@ export default function EditCategoryModal({
     if (!name) return;
 
     if (isNew) {
-      addCategory({ name, type: defaultType, color, icon });
+      addCategory({ name, type: defaultType, color, icon, isFixed });
     } else {
-      updateCategory(category.id, { name, color, icon });
+      updateCategory(category.id, { name, color, icon, isFixed });
     }
     onClose();
   };
@@ -130,6 +131,23 @@ export default function EditCategoryModal({
                 })}
               </div>
             </div>
+
+            {/* Fixed Expense Toggle */}
+            {defaultType === 'expense' && (
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                <div>
+                  <h4 className="font-medium text-gray-900">固定支出</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">房租、订阅等每月固定的开销</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFixed(!isFixed)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixed ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixed ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            )}
           </form>
         </div>
 

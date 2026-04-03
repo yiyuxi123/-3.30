@@ -94,7 +94,25 @@ export const useStore = create<AppState>()(
           const oldTransaction = state.transactions.find((t) => t.id === id);
           if (!oldTransaction) return state;
 
-          const newTransaction = { ...oldTransaction, ...updatedFields };
+          const changes: { field: string; oldValue: any; newValue: any }[] = [];
+          (Object.keys(updatedFields) as (keyof Transaction)[]).forEach((key) => {
+            if (updatedFields[key] !== oldTransaction[key] && key !== 'history') {
+              changes.push({
+                field: key,
+                oldValue: oldTransaction[key],
+                newValue: updatedFields[key],
+              });
+            }
+          });
+
+          const newHistory = changes.length > 0
+            ? [
+                ...(oldTransaction.history || []),
+                { date: new Date().toISOString(), changes },
+              ]
+            : oldTransaction.history;
+
+          const newTransaction = { ...oldTransaction, ...updatedFields, history: newHistory };
 
           // Revert old transaction effect on accounts
           let updatedAccounts = state.accounts.map((acc) => {
