@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { Transaction } from '../types';
 
 export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction }) {
-  const { categories, accounts, addTransaction, updateTransaction } = useStore();
+  const { categories, accounts, addTransaction, updateTransaction, markPreviousAsReimbursed } = useStore();
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -15,6 +15,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [note, setNote] = useState('');
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [isReimbursable, setIsReimbursable] = useState(false);
+  const [markReimbursed, setMarkReimbursed] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,6 +28,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setNote(initialTransaction.note || '');
         setDate(format(parseISO(initialTransaction.date), "yyyy-MM-dd'T'HH:mm"));
         setIsReimbursable(initialTransaction.isReimbursable || false);
+        setMarkReimbursed(false);
       } else {
         // Set defaults
         const defaultExpenseCat = categories.find(c => c.type === 'expense');
@@ -37,6 +39,8 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         if (type === 'income' && defaultIncomeCat) setCategoryId(defaultIncomeCat.id);
         if (defaultAccount) setFromAccountId(defaultAccount.id);
         if (accounts.length > 1) setToAccountId(accounts[1].id);
+        setIsReimbursable(false);
+        setMarkReimbursed(false);
       }
     }
   }, [isOpen, initialTransaction, type, categories, accounts]);
@@ -64,6 +68,9 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       updateTransaction(initialTransaction.id, txData);
     } else {
       addTransaction(txData);
+      if (type === 'income' && selectedCategory?.name === '报销款' && markReimbursed) {
+        markPreviousAsReimbursed();
+      }
     }
     onClose();
   };
@@ -74,12 +81,16 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const handleNumberClick = (num: string) => {
     if (num === '.' && amount.includes('.')) return;
     if (amount === '0' && num !== '.') {
-      setAmount(num);
+      setAmount(num === '00' ? '0' : num);
     } else {
       // Limit to 2 decimal places
       if (amount.includes('.')) {
         const [, decimal] = amount.split('.');
         if (decimal && decimal.length >= 2) return;
+        if (num === '00' && decimal && decimal.length === 1) {
+          setAmount(prev => prev + '0');
+          return;
+        }
       }
       setAmount(prev => prev + num);
     }
@@ -250,6 +261,22 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
             </div>
           )}
 
+          {/* Mark Reimbursed Checkbox */}
+          {type === 'income' && selectedCategory?.name === '报销款' && !initialTransaction && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="markReimbursed"
+                checked={markReimbursed}
+                onChange={(e) => setMarkReimbursed(e.target.checked)}
+                className="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
+              />
+              <label htmlFor="markReimbursed" className="text-sm font-medium text-gray-700">
+                将之前的可报销记录标记为已报销
+              </label>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button 
             onClick={handleSubmit}
@@ -264,30 +291,24 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         {showNumpad && (
           <div className="bg-gray-50 border-t border-gray-200 p-4 shrink-0 animate-in slide-in-from-bottom-10">
             <div className="grid grid-cols-4 gap-2">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0'].map(num => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => handleNumberClick(num)}
-                  className={`bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100 ${num === '0' ? 'col-span-2' : ''}`}
-                >
-                  {num}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="bg-gray-200 text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-300 flex items-center justify-center"
-              >
-                <Icons.Delete size={24} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowNumpad(false)}
-                className="col-span-4 bg-emerald-500 text-white text-lg font-bold py-3 rounded-xl shadow-sm active:bg-emerald-600"
-              >
-                完成
-              </button>
+              <button type="button" onClick={() => handleNumberClick('1')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">1</button>
+              <button type="button" onClick={() => handleNumberClick('2')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">2</button>
+              <button type="button" onClick={() => handleNumberClick('3')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">3</button>
+              <button type="button" onClick={handleDelete} className="bg-gray-200 text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-300 flex items-center justify-center"><Icons.Delete size={24} /></button>
+              
+              <button type="button" onClick={() => handleNumberClick('4')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">4</button>
+              <button type="button" onClick={() => handleNumberClick('5')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">5</button>
+              <button type="button" onClick={() => handleNumberClick('6')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">6</button>
+              <button type="button" onClick={handleClear} className="bg-gray-200 text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-300">C</button>
+              
+              <button type="button" onClick={() => handleNumberClick('7')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">7</button>
+              <button type="button" onClick={() => handleNumberClick('8')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">8</button>
+              <button type="button" onClick={() => handleNumberClick('9')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">9</button>
+              <button type="button" onClick={() => setShowNumpad(false)} className="row-span-2 bg-emerald-500 text-white text-xl font-bold rounded-xl shadow-sm active:bg-emerald-600 flex items-center justify-center">完成</button>
+              
+              <button type="button" onClick={() => handleNumberClick('.')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">.</button>
+              <button type="button" onClick={() => handleNumberClick('0')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">0</button>
+              <button type="button" onClick={() => handleNumberClick('00')} className="bg-white text-xl font-bold text-gray-900 py-4 rounded-xl shadow-sm active:bg-gray-100">00</button>
             </div>
           </div>
         )}

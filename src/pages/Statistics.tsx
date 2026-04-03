@@ -1,9 +1,27 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, subMonths, addMonths, subYears, addYears } from 'date-fns';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Sector } from 'recharts';
 import * as Icons from 'lucide-react';
 import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const renderActiveShape = (props: any) => {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <g>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 8}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        className="transition-all duration-300 ease-out"
+      />
+    </g>
+  );
+};
 
 export default function Statistics() {
   const { transactions, categories, budgets, accounts } = useStore();
@@ -21,6 +39,10 @@ export default function Statistics() {
   const toggleMetric = (key: keyof typeof visibleMetrics) => {
     setVisibleMetrics(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const [activeIndexCategory, setActiveIndexCategory] = useState<number | undefined>(undefined);
+  const [activeIndexFixed, setActiveIndexFixed] = useState<number | undefined>(undefined);
+  const [activeIndexAccount, setActiveIndexAccount] = useState<number | undefined>(undefined);
 
   const start = period === 'month' ? startOfMonth(selectedDate) : startOfYear(selectedDate);
   const end = period === 'month' ? endOfMonth(selectedDate) : endOfYear(selectedDate);
@@ -235,9 +257,15 @@ export default function Statistics() {
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
+                  activeIndex={activeIndexCategory}
+                  activeShape={renderActiveShape}
+                  onMouseEnter={(_, index) => setActiveIndexCategory(index)}
+                  onClick={(_, index) => setActiveIndexCategory(index)}
+                  onMouseLeave={() => setActiveIndexCategory(undefined)}
+                  isAnimationActive={true}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -297,9 +325,15 @@ export default function Statistics() {
                   outerRadius={60}
                   paddingAngle={5}
                   dataKey="value"
+                  activeIndex={activeIndexFixed}
+                  activeShape={renderActiveShape}
+                  onMouseEnter={(_, index) => setActiveIndexFixed(index)}
+                  onClick={(_, index) => setActiveIndexFixed(index)}
+                  onMouseLeave={() => setActiveIndexFixed(undefined)}
+                  isAnimationActive={true}
                 >
                   {fixedVsVariableChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -364,9 +398,15 @@ export default function Statistics() {
                   outerRadius={80}
                   paddingAngle={5}
                   dataKey="value"
+                  activeIndex={activeIndexAccount}
+                  activeShape={renderActiveShape}
+                  onMouseEnter={(_, index) => setActiveIndexAccount(index)}
+                  onClick={(_, index) => setActiveIndexAccount(index)}
+                  onMouseLeave={() => setActiveIndexAccount(undefined)}
+                  isAnimationActive={true}
                 >
                   {accountChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 

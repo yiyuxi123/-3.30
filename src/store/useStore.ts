@@ -28,6 +28,7 @@ interface AppState {
 
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
+  markPreviousAsReimbursed: () => void;
 }
 
 const initialCategories: Category[] = [
@@ -59,6 +60,12 @@ export const useStore = create<AppState>()(
       showReimbursables: true,
 
       toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
+
+      markPreviousAsReimbursed: () => set((state) => ({
+        transactions: state.transactions.map(t => 
+          t.isReimbursable && !t.isReimbursed ? { ...t, isReimbursed: true } : t
+        )
+      })),
 
       addTransaction: (transaction) =>
         set((state) => {

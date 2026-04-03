@@ -163,7 +163,9 @@ export default function Transactions() {
                               <p className="font-medium text-gray-900 flex items-center space-x-2">
                                 <span>{t.type === 'transfer' ? '转账' : category?.name || '未知'}</span>
                                 {t.isReimbursable && (
-                                  <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium shrink-0">可报销</span>
+                                  <span className={`px-1.5 py-0.5 text-[10px] rounded-sm font-medium shrink-0 ${t.isReimbursed ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>
+                                    {t.isReimbursed ? '已报销' : '待报销'}
+                                  </span>
                                 )}
                                 {category?.isFixed && t.type === 'expense' && (
                                   <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-sm font-medium shrink-0">固定</span>

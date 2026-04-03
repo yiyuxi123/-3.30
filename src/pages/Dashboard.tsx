@@ -51,6 +51,10 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const budgetRemaining = totalBudget - expense;
   const budgetPercent = totalBudget > 0 ? (expense / totalBudget) * 100 : 0;
 
+  const reimbursableAmount = transactions
+    .filter(t => t.type === 'expense' && t.isReimbursable && !t.isReimbursed)
+    .reduce((sum, t) => sum + t.amount, 0);
+
   const recentTransactions = filteredTransactions.slice(0, 5);
 
   return (
@@ -97,6 +101,17 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <p className="text-2xl font-bold text-gray-900">¥{income.toFixed(2)}</p>
         </div>
       </div>
+
+      {/* Reimbursable Banner */}
+      {reimbursableAmount > 0 && (
+        <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-amber-700">
+            <Icons.Receipt size={18} />
+            <span className="text-sm font-medium">待报销金额</span>
+          </div>
+          <p className="text-lg font-bold text-amber-700">¥{reimbursableAmount.toFixed(2)}</p>
+        </div>
+      )}
 
       {/* Budget Progress */}
       <div 
@@ -156,7 +171,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                         <p className="font-medium text-gray-900 flex items-center space-x-2">
                           <span>{category?.name || '未知'}</span>
                           {t.isReimbursable && (
-                            <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium shrink-0">可报销</span>
+                            <span className={`px-1.5 py-0.5 text-[10px] rounded-sm font-medium shrink-0 ${t.isReimbursed ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>
+                              {t.isReimbursed ? '已报销' : '待报销'}
+                            </span>
                           )}
                         </p>
                         <div className="mt-0.5 flex flex-col space-y-1">

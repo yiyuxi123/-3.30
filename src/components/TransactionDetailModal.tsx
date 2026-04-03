@@ -84,7 +84,9 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
               <Tag size={14} />
               <span>{transaction.type === 'transfer' ? '转账' : category?.name || '未知分类'}</span>
               {transaction.isReimbursable && (
-                <span className="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-sm font-medium">可报销</span>
+                <span className={`ml-2 px-1.5 py-0.5 text-[10px] rounded-sm font-medium ${transaction.isReimbursed ? 'bg-gray-100 text-gray-500' : 'bg-amber-100 text-amber-700'}`}>
+                  {transaction.isReimbursed ? '已报销' : '待报销'}
+                </span>
               )}
               {category?.isFixed && transaction.type === 'expense' && (
                 <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-sm font-medium">固定</span>

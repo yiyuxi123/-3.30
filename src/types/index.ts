@@ -37,6 +37,7 @@ export interface Transaction {
   toAccountId?: string; // For income/transfer
   note: string;
   isReimbursable?: boolean;
+  isReimbursed?: boolean;
   history?: TransactionHistory[];
 }
 
