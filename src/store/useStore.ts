@@ -28,7 +28,6 @@ interface AppState {
 
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
-  markPreviousAsReimbursed: () => void;
 }
 
 const initialCategories: Category[] = [
@@ -71,6 +70,17 @@ export const useStore = create<AppState>()(
         set((state) => {
           const newTransaction = { ...transaction, id: uuidv4() };
           
+          let updatedTransactions = [newTransaction, ...state.transactions];
+
+          if (newTransaction.reimbursedTxIds && newTransaction.reimbursedTxIds.length > 0) {
+            updatedTransactions = updatedTransactions.map(t => {
+              if (newTransaction.reimbursedTxIds!.includes(t.id)) {
+                return { ...t, isReimbursed: true, reimbursedByTxId: newTransaction.id };
+              }
+              return t;
+            });
+          }
+
           // Update account balances
           const updatedAccounts = state.accounts.map((acc) => {
             if (transaction.type === 'expense' && acc.id === transaction.fromAccountId) {
@@ -91,7 +101,7 @@ export const useStore = create<AppState>()(
           });
 
           return {
-            transactions: [newTransaction, ...state.transactions],
+            transactions: updatedTransactions,
             accounts: updatedAccounts,
           };
         }),
@@ -121,6 +131,26 @@ export const useStore = create<AppState>()(
 
           const newTransaction = { ...oldTransaction, ...updatedFields, history: newHistory };
 
+          let updatedTransactions = state.transactions.map((t) => (t.id === id ? newTransaction : t));
+
+          if (oldTransaction.reimbursedTxIds !== newTransaction.reimbursedTxIds) {
+            const oldIds = oldTransaction.reimbursedTxIds || [];
+            const newIds = newTransaction.reimbursedTxIds || [];
+            
+            const removedIds = oldIds.filter(tid => !newIds.includes(tid));
+            const addedIds = newIds.filter(tid => !oldIds.includes(tid));
+
+            updatedTransactions = updatedTransactions.map(t => {
+              if (removedIds.includes(t.id)) {
+                return { ...t, isReimbursed: false, reimbursedByTxId: undefined };
+              }
+              if (addedIds.includes(t.id)) {
+                return { ...t, isReimbursed: true, reimbursedByTxId: newTransaction.id };
+              }
+              return t;
+            });
+          }
+
           // Revert old transaction effect on accounts
           let updatedAccounts = state.accounts.map((acc) => {
             let balance = acc.balance;
@@ -146,7 +176,7 @@ export const useStore = create<AppState>()(
           });
 
           return {
-            transactions: state.transactions.map((t) => (t.id === id ? newTransaction : t)),
+            transactions: updatedTransactions,
             accounts: updatedAccounts,
           };
         }),
@@ -155,6 +185,26 @@ export const useStore = create<AppState>()(
         set((state) => {
           const transaction = state.transactions.find((t) => t.id === id);
           if (!transaction) return state;
+
+          let updatedTransactions = state.transactions.filter((t) => t.id !== id);
+
+          if (transaction.reimbursedTxIds && transaction.reimbursedTxIds.length > 0) {
+            updatedTransactions = updatedTransactions.map(t => {
+              if (transaction.reimbursedTxIds!.includes(t.id)) {
+                return { ...t, isReimbursed: false, reimbursedByTxId: undefined };
+              }
+              return t;
+            });
+          }
+
+          if (transaction.reimbursedByTxId) {
+             updatedTransactions = updatedTransactions.map(t => {
+               if (t.id === transaction.reimbursedByTxId) {
+                 return { ...t, reimbursedTxIds: t.reimbursedTxIds?.filter(tid => tid !== id) };
+               }
+               return t;
+             });
+          }
 
           // Revert transaction effect on accounts
           const updatedAccounts = state.accounts.map((acc) => {
@@ -169,7 +219,7 @@ export const useStore = create<AppState>()(
           });
 
           return {
-            transactions: state.transactions.filter((t) => t.id !== id),
+            transactions: updatedTransactions,
             accounts: updatedAccounts,
           };
         }),

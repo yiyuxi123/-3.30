@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { Transaction } from '../types';
 
 export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction }) {
-  const { categories, accounts, addTransaction, updateTransaction, markPreviousAsReimbursed } = useStore();
+  const { categories, accounts, addTransaction, updateTransaction, transactions } = useStore();
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -15,7 +15,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [note, setNote] = useState('');
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [isReimbursable, setIsReimbursable] = useState(false);
-  const [markReimbursed, setMarkReimbursed] = useState(false);
+  const [selectedReimbursableIds, setSelectedReimbursableIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -28,7 +28,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setNote(initialTransaction.note || '');
         setDate(format(parseISO(initialTransaction.date), "yyyy-MM-dd'T'HH:mm"));
         setIsReimbursable(initialTransaction.isReimbursable || false);
-        setMarkReimbursed(false);
+        setSelectedReimbursableIds(initialTransaction.reimbursedTxIds || []);
       } else {
         // Set defaults
         const defaultExpenseCat = categories.find(c => c.type === 'expense');
@@ -40,18 +40,33 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         if (defaultAccount) setFromAccountId(defaultAccount.id);
         if (accounts.length > 1) setToAccountId(accounts[1].id);
         setIsReimbursable(false);
-        setMarkReimbursed(false);
+        setSelectedReimbursableIds([]);
+        setAmount('');
       }
     }
   }, [isOpen, initialTransaction, type, categories, accounts]);
+
+  const selectedCategory = categories.find(c => c.id === categoryId);
+
+  useEffect(() => {
+    if (type === 'income' && selectedCategory?.name === '报销款') {
+      const total = selectedReimbursableIds.reduce((sum, id) => {
+        const tx = transactions.find(t => t.id === id);
+        return sum + (tx?.amount || 0);
+      }, 0);
+      if (total > 0) {
+        setAmount(total.toString());
+      } else if (selectedReimbursableIds.length === 0 && !initialTransaction) {
+        setAmount('');
+      }
+    }
+  }, [selectedReimbursableIds, type, selectedCategory?.name, transactions, initialTransaction]);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
-
-    const selectedCategory = categories.find(c => c.id === categoryId);
 
     const txData = {
       type,
@@ -61,22 +76,19 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       fromAccountId: type !== 'income' ? fromAccountId : undefined,
       toAccountId: type !== 'expense' ? toAccountId : undefined,
       note,
-      isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined
+      isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined,
+      reimbursedTxIds: type === 'income' && selectedCategory?.name === '报销款' ? selectedReimbursableIds : undefined
     };
 
     if (initialTransaction) {
       updateTransaction(initialTransaction.id, txData);
     } else {
       addTransaction(txData);
-      if (type === 'income' && selectedCategory?.name === '报销款' && markReimbursed) {
-        markPreviousAsReimbursed();
-      }
     }
     onClose();
   };
 
   const filteredCategories = categories.filter(c => c.type === type);
-  const selectedCategory = categories.find(c => c.id === categoryId);
 
   const handleNumberClick = (num: string) => {
     if (num === '.' && amount.includes('.')) return;
@@ -261,19 +273,58 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
             </div>
           )}
 
-          {/* Mark Reimbursed Checkbox */}
-          {type === 'income' && selectedCategory?.name === '报销款' && !initialTransaction && (
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="markReimbursed"
-                checked={markReimbursed}
-                onChange={(e) => setMarkReimbursed(e.target.checked)}
-                className="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
-              />
-              <label htmlFor="markReimbursed" className="text-sm font-medium text-gray-700">
-                将之前的可报销记录标记为已报销
-              </label>
+          {/* Reimbursable Selection for Income */}
+          {type === 'income' && selectedCategory?.name === '报销款' && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="block text-sm font-medium text-gray-700">选择要报销的记录</label>
+                {transactions.filter(t => t.type === 'expense' && t.isReimbursable && (!t.isReimbursed || t.reimbursedByTxId === initialTransaction?.id)).length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const availableTxs = transactions.filter(t => t.type === 'expense' && t.isReimbursable && (!t.isReimbursed || t.reimbursedByTxId === initialTransaction?.id));
+                      if (selectedReimbursableIds.length === availableTxs.length) {
+                        setSelectedReimbursableIds([]);
+                      } else {
+                        setSelectedReimbursableIds(availableTxs.map(t => t.id));
+                      }
+                    }}
+                    className="text-xs text-emerald-600 font-medium"
+                  >
+                    {selectedReimbursableIds.length === transactions.filter(t => t.type === 'expense' && t.isReimbursable && (!t.isReimbursed || t.reimbursedByTxId === initialTransaction?.id)).length ? '取消全选' : '全选'}
+                  </button>
+                )}
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-2 border border-gray-100 rounded-xl p-2 bg-gray-50">
+                {transactions.filter(t => t.type === 'expense' && t.isReimbursable && (!t.isReimbursed || t.reimbursedByTxId === initialTransaction?.id)).length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-2">没有待报销的记录</p>
+                ) : (
+                  transactions
+                    .filter(t => t.type === 'expense' && t.isReimbursable && (!t.isReimbursed || t.reimbursedByTxId === initialTransaction?.id))
+                    .map(t => (
+                      <div key={t.id} className="flex items-center space-x-3 p-2 bg-white rounded-lg border border-gray-100">
+                        <input
+                          type="checkbox"
+                          checked={selectedReimbursableIds.includes(t.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedReimbursableIds(prev => [...prev, t.id]);
+                            } else {
+                              setSelectedReimbursableIds(prev => prev.filter(id => id !== t.id));
+                            }
+                          }}
+                          className="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {format(parseISO(t.date), 'MM-dd')} {t.note || categories.find(c => c.id === t.categoryId)?.name}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">¥{t.amount.toFixed(2)}</span>
+                      </div>
+                    ))
+                )}
+              </div>
             </div>
           )}
 

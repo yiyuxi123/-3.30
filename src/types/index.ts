@@ -38,6 +38,8 @@ export interface Transaction {
   note: string;
   isReimbursable?: boolean;
   isReimbursed?: boolean;
+  reimbursedTxIds?: string[];
+  reimbursedByTxId?: string;
   history?: TransactionHistory[];
 }
 
