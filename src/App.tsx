@@ -26,7 +26,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-24 relative">
+      <main className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -35,7 +35,7 @@ export default function App() {
             exit="out"
             variants={pageVariants}
             transition={pageTransition}
-            className="h-full"
+            className="min-h-full pb-24"
           >
             {activeTab === 'home' && <Dashboard onNavigate={setActiveTab} />}
             {activeTab === 'transactions' && <Transactions />}

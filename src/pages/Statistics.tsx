@@ -151,7 +151,7 @@ export default function Statistics() {
   });
 
   return (
-    <div className="p-4 space-y-6 max-w-md mx-auto pb-24">
+    <div className="p-4 space-y-6 max-w-md mx-auto">
       {/* Header */}
       <header className="pt-4 pb-2">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">统计分析</h1>
