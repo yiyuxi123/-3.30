@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { Plus, Wallet, CreditCard, Smartphone, MessageCircle, Banknote, Download } from 'lucide-react';
 import * as Icons from 'lucide-react';
@@ -15,9 +15,17 @@ export default function Accounts() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const totalAssets = accounts.filter(a => a.balance > 0).reduce((sum, a) => sum + a.balance, 0);
-  const totalLiabilities = accounts.filter(a => a.balance < 0).reduce((sum, a) => sum + Math.abs(a.balance), 0);
+  const { totalBalance, totalAssets, totalLiabilities } = useMemo(() => {
+    let balance = 0;
+    let assets = 0;
+    let liabilities = 0;
+    accounts.forEach(a => {
+      balance += a.balance;
+      if (a.balance > 0) assets += a.balance;
+      if (a.balance < 0) liabilities += Math.abs(a.balance);
+    });
+    return { totalBalance: balance, totalAssets: assets, totalLiabilities: liabilities };
+  }, [accounts]);
 
   const exportToCSV = (filename: string, rows: string[][]) => {
     const csvContent = rows.map(e => e.join(",")).join("\n");

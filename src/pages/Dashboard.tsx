@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff } from 'lucide-react';
@@ -13,50 +13,66 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
-  const now = new Date();
-  const start = startOfMonth(now);
-  const end = endOfMonth(now);
+  const now = useMemo(() => new Date(), []);
+  const start = useMemo(() => startOfMonth(now), [now]);
+  const end = useMemo(() => endOfMonth(now), [now]);
 
-  const isReimbursableTx = (t: Transaction) => {
-    if (t.type === 'expense' && t.isReimbursable) return true;
-    if (t.type === 'income') {
-      const cat = categories.find(c => c.id === t.categoryId);
-      if (cat?.name === '报销款') return true;
-    }
-    return false;
-  };
+  const filteredTransactions = useMemo(() => {
+    const isReimbursableTx = (t: Transaction) => {
+      if (t.type === 'expense' && t.isReimbursable) return true;
+      if (t.type === 'income') {
+        const cat = categories.find(c => c.id === t.categoryId);
+        if (cat?.name === '报销款') return true;
+      }
+      return false;
+    };
 
-  const filteredTransactions = transactions.filter(t => {
-    if (!showReimbursables && isReimbursableTx(t)) return false;
-    return true;
-  });
+    return transactions.filter(t => {
+      if (!showReimbursables && isReimbursableTx(t)) return false;
+      return true;
+    });
+  }, [transactions, showReimbursables, categories]);
 
-  const currentMonthTransactions = filteredTransactions.filter(t => {
-    const d = new Date(t.date);
-    return isWithinInterval(d, { start, end });
-  });
+  const currentMonthTransactions = useMemo(() => {
+    return filteredTransactions.filter(t => {
+      const d = new Date(t.date);
+      return isWithinInterval(d, { start, end });
+    });
+  }, [filteredTransactions, start, end]);
 
-  const expense = currentMonthTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const { expense, income } = useMemo(() => {
+    let exp = 0;
+    let inc = 0;
+    currentMonthTransactions.forEach(t => {
+      if (t.type === 'expense') exp += t.amount;
+      if (t.type === 'income') inc += t.amount;
+    });
+    return { expense: exp, income: inc };
+  }, [currentMonthTransactions]);
 
-  const income = currentMonthTransactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const dailyAverage = useMemo(() => {
+    const currentDay = now.getDate();
+    return expense / currentDay;
+  }, [expense, now]);
 
-  const currentDay = now.getDate();
-  const dailyAverage = expense / currentDay;
+  const totalBalance = useMemo(() => accounts.reduce((sum, a) => sum + a.balance, 0), [accounts]);
+  
+  const { totalBudget, budgetRemaining, budgetPercent } = useMemo(() => {
+    const total = budgets.find(b => !b.categoryId)?.amount || 0;
+    return {
+      totalBudget: total,
+      budgetRemaining: total - expense,
+      budgetPercent: total > 0 ? (expense / total) * 100 : 0
+    };
+  }, [budgets, expense]);
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
-  const totalBudget = budgets.find(b => !b.categoryId)?.amount || 0;
-  const budgetRemaining = totalBudget - expense;
-  const budgetPercent = totalBudget > 0 ? (expense / totalBudget) * 100 : 0;
+  const reimbursableAmount = useMemo(() => {
+    return transactions
+      .filter(t => t.type === 'expense' && t.isReimbursable && !t.isReimbursed)
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
 
-  const reimbursableAmount = transactions
-    .filter(t => t.type === 'expense' && t.isReimbursable && !t.isReimbursed)
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const recentTransactions = filteredTransactions.slice(0, 5);
+  const recentTransactions = useMemo(() => filteredTransactions.slice(0, 5), [filteredTransactions]);
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">

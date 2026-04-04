@@ -90,6 +90,7 @@ export default function App() {
       <AnimatePresence>
         {isAddModalOpen && (
           <AddTransactionModal 
+            key="add-transaction-modal"
             isOpen={isAddModalOpen} 
             onClose={() => setIsAddModalOpen(false)} 
           />
@@ -99,7 +100,7 @@ export default function App() {
   );
 }
 
-function NavItem({ icon, label, isActive, onClick }: { icon: React.ReactNode, label: string, isActive: boolean, onClick: () => void }) {
+const NavItem = React.memo(function NavItem({ icon, label, isActive, onClick }: { icon: React.ReactNode, label: string, isActive: boolean, onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
@@ -117,4 +118,4 @@ function NavItem({ icon, label, isActive, onClick }: { icon: React.ReactNode, la
       <span className={`text-[10px] font-medium transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
     </button>
   );
-}
+});

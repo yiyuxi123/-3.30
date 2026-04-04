@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, subMonths, addMonths, subYears, addYears } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Sector, AreaChart, Area } from 'recharts';
@@ -46,8 +46,12 @@ export default function Statistics() {
   const [activeIndexFixed, setActiveIndexFixed] = useState<number | undefined>(undefined);
   const [activeIndexAccount, setActiveIndexAccount] = useState<number | undefined>(undefined);
 
-  const start = period === 'month' ? startOfMonth(selectedDate) : startOfYear(selectedDate);
-  const end = period === 'month' ? endOfMonth(selectedDate) : endOfYear(selectedDate);
+  const { start, end } = useMemo(() => {
+    return {
+      start: period === 'month' ? startOfMonth(selectedDate) : startOfYear(selectedDate),
+      end: period === 'month' ? endOfMonth(selectedDate) : endOfYear(selectedDate)
+    };
+  }, [period, selectedDate]);
 
   const handlePrev = () => {
     setSelectedDate(prev => period === 'month' ? subMonths(prev, 1) : subYears(prev, 1));
@@ -57,98 +61,113 @@ export default function Statistics() {
     setSelectedDate(prev => period === 'month' ? addMonths(prev, 1) : addYears(prev, 1));
   };
 
-  const dateLabel = period === 'month' ? format(selectedDate, 'yyyy年MM月') : format(selectedDate, 'yyyy年');
+  const dateLabel = useMemo(() => period === 'month' ? format(selectedDate, 'yyyy年MM月') : format(selectedDate, 'yyyy年'), [period, selectedDate]);
 
-  const filteredTransactions = transactions.filter(t => {
-    const d = new Date(t.date);
-    return t.type === type && isWithinInterval(d, { start, end });
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const d = new Date(t.date);
+      return t.type === type && isWithinInterval(d, { start, end });
+    });
+  }, [transactions, type, start, end]);
 
-  const total = filteredTransactions.reduce((sum, t) => sum + t.amount, 0);
+  const total = useMemo(() => filteredTransactions.reduce((sum, t) => sum + t.amount, 0), [filteredTransactions]);
 
   // Group by category
-  const categoryData = filteredTransactions.reduce((acc, t) => {
-    const cat = categories.find(c => c.id === t.categoryId);
-    if (!cat) return acc;
-    
-    if (!acc[cat.id]) {
-      acc[cat.id] = { name: cat.name, value: 0, color: cat.color, icon: cat.icon };
-    }
-    acc[cat.id].value += t.amount;
-    return acc;
-  }, {} as Record<string, { name: string, value: number, color: string, icon: string }>);
+  const chartData = useMemo(() => {
+    const categoryData = filteredTransactions.reduce((acc, t) => {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (!cat) return acc;
+      
+      if (!acc[cat.id]) {
+        acc[cat.id] = { name: cat.name, value: 0, color: cat.color, icon: cat.icon };
+      }
+      acc[cat.id].value += t.amount;
+      return acc;
+    }, {} as Record<string, { name: string, value: number, color: string, icon: string }>);
 
-  const chartData = Object.values(categoryData).sort((a, b) => b.value - a.value);
+    return Object.values(categoryData).sort((a: any, b: any) => b.value - a.value);
+  }, [filteredTransactions, categories]);
 
   // Trend data for bar chart
-  const trendData = filteredTransactions.reduce((acc, t) => {
-    const key = period === 'month' ? format(parseISO(t.date), 'dd') : format(parseISO(t.date), 'MM');
-    if (!acc[key]) acc[key] = { name: key, value: 0 };
-    acc[key].value += t.amount;
-    return acc;
-  }, {} as Record<string, { name: string, value: number }>);
+  const barData = useMemo(() => {
+    const trendData = filteredTransactions.reduce((acc, t) => {
+      const key = period === 'month' ? format(parseISO(t.date), 'dd') : format(parseISO(t.date), 'MM');
+      if (!acc[key]) acc[key] = { name: key, value: 0 };
+      acc[key].value += t.amount;
+      return acc;
+    }, {} as Record<string, { name: string, value: number }>);
 
-  const barData = Object.values(trendData).sort((a, b) => Number(a.name) - Number(b.name));
+    return Object.values(trendData).sort((a: any, b: any) => Number(a.name) - Number(b.name));
+  }, [filteredTransactions, period]);
 
   // Fixed vs Variable data
-  const fixedData = filteredTransactions.reduce((acc, t) => {
-    const cat = categories.find(c => c.id === t.categoryId);
-    if (cat?.isFixed) {
-      acc.fixed += t.amount;
-    } else {
-      acc.variable += t.amount;
-    }
-    return acc;
-  }, { fixed: 0, variable: 0 });
+  const fixedVsVariableChartData = useMemo(() => {
+    const fixedData = filteredTransactions.reduce((acc, t) => {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (cat?.isFixed) {
+        acc.fixed += t.amount;
+      } else {
+        acc.variable += t.amount;
+      }
+      return acc;
+    }, { fixed: 0, variable: 0 });
 
-  const fixedVsVariableChartData = [
-    { name: '固定支出', value: fixedData.fixed, color: '#3b82f6' },
-    { name: '浮动支出', value: fixedData.variable, color: '#f59e0b' }
-  ].filter(d => d.value > 0);
+    return [
+      { name: '固定支出', value: fixedData.fixed, color: '#3b82f6' },
+      { name: '浮动支出', value: fixedData.variable, color: '#f59e0b' }
+    ].filter(d => d.value > 0);
+  }, [filteredTransactions, categories]);
 
   // Account data
-  const accountData = filteredTransactions.reduce((acc, t) => {
-    const accountId = type === 'expense' ? t.fromAccountId : t.toAccountId;
-    if (!accountId) return acc;
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return acc;
-    
-    if (!acc[account.id]) {
-      acc[account.id] = { name: account.name, value: 0, color: account.color, icon: account.icon };
-    }
-    acc[account.id].value += t.amount;
-    return acc;
-  }, {} as Record<string, { name: string, value: number, color: string, icon: string }>);
+  const accountChartData = useMemo(() => {
+    const accountData = filteredTransactions.reduce((acc, t) => {
+      const accountId = type === 'expense' ? t.fromAccountId : t.toAccountId;
+      if (!accountId) return acc;
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return acc;
+      
+      if (!acc[account.id]) {
+        acc[account.id] = { name: account.name, value: 0, color: account.color, icon: account.icon };
+      }
+      acc[account.id].value += t.amount;
+      return acc;
+    }, {} as Record<string, { name: string, value: number, color: string, icon: string }>);
 
-  const accountChartData = Object.values(accountData).sort((a, b) => b.value - a.value);
+    return Object.values(accountData).sort((a: any, b: any) => b.value - a.value);
+  }, [filteredTransactions, type, accounts]);
 
   // Insights calculations
-  const maxCategory = chartData.length > 0 ? chartData[0] : null;
-  const maxTrend = barData.length > 0 ? barData.reduce((max, d) => d.value > max.value ? d : max, barData[0]) : null;
-  const totalBudget = period === 'month' ? (budgets.find(b => !b.categoryId)?.amount || 0) : (budgets.find(b => !b.categoryId)?.amount || 0) * 12;
+  const maxCategory = useMemo(() => chartData.length > 0 ? chartData[0] : null, [chartData]);
+  const maxTrend = useMemo(() => barData.length > 0 ? barData.reduce((max, d) => d.value > max.value ? d : max, barData[0]) : null, [barData]);
+  const totalBudget = useMemo(() => {
+    const baseBudget = budgets.find(b => !b.categoryId)?.amount || 0;
+    return period === 'month' ? baseBudget : baseBudget * 12;
+  }, [budgets, period]);
 
   // Total Asset Trend (Past 12 Months)
-  const currentTotalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
-  
-  const last12Months = Array.from({ length: 12 }).map((_, i) => {
-    return format(subMonths(new Date(), i), 'yyyy-MM');
-  }).reverse();
+  const assetTrendData = useMemo(() => {
+    const currentTotalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+    
+    const last12Months = Array.from({ length: 12 }).map((_, i) => {
+      return format(subMonths(new Date(), i), 'yyyy-MM');
+    }).reverse();
 
-  const assetTrendData = last12Months.map(month => {
-    const futureNetFlow = transactions
-      .filter(t => format(parseISO(t.date), 'yyyy-MM') > month)
-      .reduce((sum, t) => {
-        if (t.type === 'income') return sum + t.amount;
-        if (t.type === 'expense') return sum - t.amount;
-        return sum;
-      }, 0);
-      
-    return {
-      name: `${parseInt(month.split('-')[1])}月`,
-      fullMonth: month,
-      value: currentTotalBalance - futureNetFlow
-    };
-  });
+    return last12Months.map(month => {
+      const futureNetFlow = transactions
+        .filter(t => format(parseISO(t.date), 'yyyy-MM') > month)
+        .reduce((sum, t) => {
+          if (t.type === 'income') return sum + t.amount;
+          if (t.type === 'expense') return sum - t.amount;
+          return sum;
+        }, 0);
+        
+      return {
+        name: `${parseInt(month.split('-')[1])}月`,
+        fullMonth: month,
+        value: currentTotalBalance - futureNetFlow
+      };
+    });
+  }, [accounts, transactions]);
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
@@ -230,6 +249,7 @@ export default function Statistics() {
         {/* Smart Insights */}
         {visibleMetrics.insights && type === 'expense' && filteredTransactions.length > 0 && (
           <motion.div 
+            key="insights"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -281,6 +301,7 @@ export default function Statistics() {
         {/* Pie Chart */}
         {visibleMetrics.category && (chartData.length > 0 ? (
           <motion.div 
+            key="category-chart"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
@@ -306,7 +327,7 @@ export default function Statistics() {
                   isAnimationActive={true}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
+                    <Cell key={`category-cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -347,6 +368,7 @@ export default function Statistics() {
         </motion.div>
       ) : (
         <motion.div 
+          key="category-empty"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -358,7 +380,13 @@ export default function Statistics() {
 
       {/* Fixed vs Variable Chart */}
       {visibleMetrics.fixedVsVariable && type === 'expense' && fixedVsVariableChartData.length > 0 && (
-        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+        <motion.div 
+          key="fixed-variable"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
+        >
           <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">固定 vs 浮动支出</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -379,7 +407,7 @@ export default function Statistics() {
                   isAnimationActive={true}
                 >
                   {fixedVsVariableChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
+                    <Cell key={`fixed-cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -398,12 +426,18 @@ export default function Statistics() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Bar Chart */}
       {visibleMetrics.trend && barData.length > 0 && (
-        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+        <motion.div 
+          key="trend"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
+        >
           <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">收支趋势</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -426,12 +460,18 @@ export default function Statistics() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Total Asset Trend Chart */}
       {visibleMetrics.assetTrend && (
-        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+        <motion.div 
+          key="asset-trend"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
+        >
           <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">总资产趋势 (近12个月)</h3>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -470,12 +510,18 @@ export default function Statistics() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Account Breakdown Chart */}
-      {visibleMetrics.account && accountChartData.length > 0 && (
-        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+      {visibleMetrics.account && (accountChartData.length > 0 ? (
+        <motion.div 
+          key="account-chart"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
+        >
           <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">账户分布</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -496,7 +542,7 @@ export default function Statistics() {
                   isAnimationActive={true}
                 >
                   {accountChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} className="outline-none" />
+                    <Cell key={`account-cell-${index}`} fill={entry.color} className="outline-none" />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -534,8 +580,18 @@ export default function Statistics() {
               );
             })}
           </div>
-        </div>
-      )}
+        </motion.div>
+      ) : (
+        <motion.div 
+          key="account-empty"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center text-gray-400"
+        >
+          暂无数据
+        </motion.div>
+      ))}
       </AnimatePresence>
     </div>
   );

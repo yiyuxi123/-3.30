@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, isSameMonth, parseISO } from 'date-fns';
 import * as Icons from 'lucide-react';
@@ -15,31 +15,37 @@ export default function Transactions() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
-  const isReimbursableTx = (t: Transaction) => {
-    if (t.type === 'expense' && t.isReimbursable) return true;
-    if (t.type === 'income') {
-      const cat = categories.find(c => c.id === t.categoryId);
-      if (cat?.name === '报销款') return true;
-    }
-    return false;
-  };
+  const filteredTransactions = useMemo(() => {
+    const isReimbursableTx = (t: Transaction) => {
+      if (t.type === 'expense' && t.isReimbursable) return true;
+      if (t.type === 'income') {
+        const cat = categories.find(c => c.id === t.categoryId);
+        if (cat?.name === '报销款') return true;
+      }
+      return false;
+    };
 
-  const filteredTransactions = transactions.filter(t => {
-    if (!showReimbursables && isReimbursableTx(t)) return false;
-    
-    const matchesSearch = t.note.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || t.type === filterType;
-    return matchesSearch && matchesType;
-  });
+    const lowerSearchTerm = searchTerm.toLowerCase();
+
+    return transactions.filter(t => {
+      if (!showReimbursables && isReimbursableTx(t)) return false;
+      
+      const matchesSearch = t.note.toLowerCase().includes(lowerSearchTerm) || 
+                            categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm);
+      const matchesType = filterType === 'all' || t.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [transactions, categories, showReimbursables, searchTerm, filterType]);
 
   // Group by month
-  const grouped = filteredTransactions.reduce((acc, t) => {
-    const month = format(parseISO(t.date), 'yyyy-MM');
-    if (!acc[month]) acc[month] = [];
-    acc[month].push(t);
-    return acc;
-  }, {} as Record<string, typeof transactions>);
+  const grouped = useMemo(() => {
+    return filteredTransactions.reduce((acc, t) => {
+      const month = format(parseISO(t.date), 'yyyy-MM');
+      if (!acc[month]) acc[month] = [];
+      acc[month].push(t);
+      return acc;
+    }, {} as Record<string, Transaction[]>);
+  }, [filteredTransactions]);
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
@@ -124,7 +130,7 @@ export default function Transactions() {
               <p>没有找到相关记录</p>
             </div>
           ) : (
-            Object.entries(grouped).map(([month, monthTransactions]) => {
+            (Object.entries(grouped) as [string, Transaction[]][]).map(([month, monthTransactions]) => {
               const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
               const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
 
