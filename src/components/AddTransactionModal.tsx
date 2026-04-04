@@ -4,6 +4,7 @@ import { X, Check, Mic } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Transaction } from '../types';
+import { motion } from 'motion/react';
 
 export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction }) {
   const { categories, accounts, addTransaction, updateTransaction, transactions } = useStore();
@@ -119,8 +120,19 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [showNumpad, setShowNumpad] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm transition-opacity">
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300 max-h-[90vh] flex flex-col">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm"
+    >
+      <motion.div 
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+      >
         
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100 shrink-0">
@@ -363,7 +375,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

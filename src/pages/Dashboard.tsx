@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import { motion } from 'motion/react';
 import EditBudgetModal from '../components/EditBudgetModal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { Transaction } from '../types';
@@ -85,37 +86,49 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        <motion.div 
+          whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+          className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 transition-all"
+        >
           <div className="flex items-center space-x-2 text-gray-500 mb-2">
             <TrendingDown size={16} className="text-red-500" />
             <span className="text-sm font-medium">本月支出</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">¥{expense.toFixed(2)}</p>
           <p className="text-xs text-gray-400 mt-1">日均 ¥{dailyAverage.toFixed(2)}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+        </motion.div>
+        <motion.div 
+          whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+          className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 transition-all"
+        >
           <div className="flex items-center space-x-2 text-gray-500 mb-2">
             <TrendingUp size={16} className="text-emerald-500" />
             <span className="text-sm font-medium">本月收入</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">¥{income.toFixed(2)}</p>
-        </div>
+        </motion.div>
       </div>
 
       {/* Reimbursable Banner */}
       {reimbursableAmount > 0 && (
-        <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center justify-between"
+        >
           <div className="flex items-center space-x-2 text-amber-700">
             <Icons.Receipt size={18} />
             <span className="text-sm font-medium">待报销金额</span>
           </div>
           <p className="text-lg font-bold text-amber-700">¥{reimbursableAmount.toFixed(2)}</p>
-        </div>
+        </motion.div>
       )}
 
       {/* Budget Progress */}
-      <div 
-        className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-shadow"
+      <motion.div 
+        whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+        whileTap={{ scale: 0.98 }}
+        className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 cursor-pointer transition-all"
         onClick={() => setIsBudgetModalOpen(true)}
       >
         <div className="flex justify-between items-end mb-2">
@@ -126,12 +139,14 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           <p className="text-sm text-gray-400">总预算 ¥{totalBudget}</p>
         </div>
         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mt-4">
-          <div 
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(budgetPercent, 100)}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
             className={`h-full rounded-full ${budgetPercent > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
-            style={{ width: `${Math.min(budgetPercent, 100)}%` }}
           />
         </div>
-      </div>
+      </motion.div>
 
       {/* Recent Transactions */}
       <div>

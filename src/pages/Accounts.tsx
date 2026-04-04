@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Plus, Wallet, CreditCard, Smartphone, MessageCircle, Banknote, Download } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import { motion } from 'motion/react';
 import AddAccountModal from '../components/AddAccountModal';
 import EditAccountModal from '../components/EditAccountModal';
 import CategoryManagementModal from '../components/CategoryManagementModal';
@@ -98,13 +99,18 @@ export default function Accounts() {
         <h3 className="text-lg font-bold text-gray-900">我的账户</h3>
         
         <div className="grid grid-cols-1 gap-3">
-          {accounts.map(account => {
+          {accounts.map((account, index) => {
             const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
             
             return (
-              <div 
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+                whileTap={{ scale: 0.98 }}
                 key={account.id} 
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer transition-all"
                 onClick={() => setSelectedAccount(account)}
               >
                 <div className="flex items-center space-x-4">
@@ -124,7 +130,7 @@ export default function Accounts() {
                     ¥{account.balance.toFixed(2)}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -134,27 +140,33 @@ export default function Accounts() {
       <div className="space-y-4 pt-4">
         <h3 className="text-lg font-bold text-gray-900">系统设置</h3>
         <div className="grid grid-cols-3 gap-3">
-          <button 
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsCategoryOpen(true)}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors text-gray-700"
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
           >
             <Icons.Tags size={24} className="text-purple-500" />
             <span className="text-sm font-medium">分类管理</span>
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleExportTransactions}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors text-gray-700"
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
           >
             <Download size={24} className="text-emerald-500" />
             <span className="text-sm font-medium">导出账单</span>
-          </button>
-          <button 
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleExportAccounts}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 hover:bg-gray-50 transition-colors text-gray-700"
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
           >
             <Download size={24} className="text-blue-500" />
             <span className="text-sm font-medium">导出资产</span>
-          </button>
+          </motion.button>
         </div>
       </div>
 

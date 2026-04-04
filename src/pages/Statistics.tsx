@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, subMonths, addMonths, subYears, addYears } from 'date-fns';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Sector } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Sector, AreaChart, Area } from 'recharts';
 import * as Icons from 'lucide-react';
 import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const renderActiveShape = (props: any) => {
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
@@ -34,6 +35,7 @@ export default function Statistics() {
     trend: true,
     fixedVsVariable: true,
     account: false,
+    assetTrend: true,
   });
 
   const toggleMetric = (key: keyof typeof visibleMetrics) => {
@@ -125,6 +127,29 @@ export default function Statistics() {
   const maxTrend = barData.length > 0 ? barData.reduce((max, d) => d.value > max.value ? d : max, barData[0]) : null;
   const totalBudget = period === 'month' ? (budgets.find(b => !b.categoryId)?.amount || 0) : (budgets.find(b => !b.categoryId)?.amount || 0) * 12;
 
+  // Total Asset Trend (Past 12 Months)
+  const currentTotalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
+  
+  const last12Months = Array.from({ length: 12 }).map((_, i) => {
+    return format(subMonths(new Date(), i), 'yyyy-MM');
+  }).reverse();
+
+  const assetTrendData = last12Months.map(month => {
+    const futureNetFlow = transactions
+      .filter(t => format(parseISO(t.date), 'yyyy-MM') > month)
+      .reduce((sum, t) => {
+        if (t.type === 'income') return sum + t.amount;
+        if (t.type === 'expense') return sum - t.amount;
+        return sum;
+      }, 0);
+      
+    return {
+      name: `${parseInt(month.split('-')[1])}月`,
+      fullMonth: month,
+      value: currentTotalBalance - futureNetFlow
+    };
+  });
+
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto pb-24">
       {/* Header */}
@@ -180,6 +205,7 @@ export default function Statistics() {
             <button onClick={() => toggleMetric('insights')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.insights ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>智能洞察</button>
             <button onClick={() => toggleMetric('category')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.category ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>分类占比</button>
             <button onClick={() => toggleMetric('trend')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.trend ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>收支趋势</button>
+            <button onClick={() => toggleMetric('assetTrend')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.assetTrend ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>资产趋势</button>
             {type === 'expense' && (
               <button onClick={() => toggleMetric('fixedVsVariable')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.fixedVsVariable ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>固定/浮动</button>
             )}
@@ -189,63 +215,78 @@ export default function Statistics() {
       </header>
 
       {/* Total Card */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 text-center"
+      >
         <p className="text-gray-500 text-sm font-medium mb-2">{period === 'month' ? '本月' : '本年'}总{type === 'expense' ? '支出' : '收入'}</p>
         <h2 className={`text-4xl font-bold ${type === 'expense' ? 'text-gray-900' : 'text-emerald-500'}`}>
           ¥{total.toFixed(2)}
         </h2>
-      </div>
+      </motion.div>
 
-      {/* Smart Insights */}
-      {visibleMetrics.insights && type === 'expense' && filteredTransactions.length > 0 && (
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-3xl shadow-sm text-white space-y-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Sparkles size={20} className="text-yellow-300" />
-            <h3 className="text-lg font-bold">{period === 'month' ? '本月' : '本年'}消费洞察</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {maxCategory && (
-              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                <p className="text-indigo-100 text-xs mb-1">🔥 最大开销分类</p>
-                <p className="font-medium">
-                  <span className="text-xl font-bold">{maxCategory.name}</span> 
-                  <span className="ml-2">¥{maxCategory.value.toFixed(2)}</span>
-                  <span className="text-indigo-200 text-sm ml-2">占 {((maxCategory.value / total) * 100).toFixed(1)}%</span>
-                </p>
-              </div>
-            )}
+      <AnimatePresence mode="popLayout">
+        {/* Smart Insights */}
+        {visibleMetrics.insights && type === 'expense' && filteredTransactions.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-3xl shadow-sm text-white space-y-4"
+          >
+            <div className="flex items-center space-x-2 mb-2">
+              <Sparkles size={20} className="text-yellow-300" />
+              <h3 className="text-lg font-bold">{period === 'month' ? '本月' : '本年'}消费洞察</h3>
+            </div>
             
-            {maxTrend && (
-              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                <p className="text-indigo-100 text-xs mb-1">📅 最高消费{period === 'month' ? '日' : '月'}</p>
-                <p className="font-medium">
-                  <span className="text-xl font-bold">{maxTrend.name}{period === 'month' ? '日' : '月'}</span> 
-                  <span className="ml-2">¥{maxTrend.value.toFixed(2)}</span>
-                </p>
-              </div>
-            )}
+            <div className="space-y-3">
+              {maxCategory && (
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                  <p className="text-indigo-100 text-xs mb-1">🔥 最大开销分类</p>
+                  <p className="font-medium">
+                    <span className="text-xl font-bold">{maxCategory.name}</span> 
+                    <span className="ml-2">¥{maxCategory.value.toFixed(2)}</span>
+                    <span className="text-indigo-200 text-sm ml-2">占 {((maxCategory.value / total) * 100).toFixed(1)}%</span>
+                  </p>
+                </div>
+              )}
+              
+              {maxTrend && (
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                  <p className="text-indigo-100 text-xs mb-1">📅 最高消费{period === 'month' ? '日' : '月'}</p>
+                  <p className="font-medium">
+                    <span className="text-xl font-bold">{maxTrend.name}{period === 'month' ? '日' : '月'}</span> 
+                    <span className="ml-2">¥{maxTrend.value.toFixed(2)}</span>
+                  </p>
+                </div>
+              )}
 
-            {totalBudget > 0 && (
-              <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
-                <p className="text-indigo-100 text-xs mb-1">💰 预算健康度</p>
-                <p className="font-medium">
-                  {total > totalBudget ? (
-                    <span className="text-red-300">已超支 ¥{(total - totalBudget).toFixed(2)}，请注意控制！</span>
-                  ) : (
-                    <span className="text-emerald-300">预算剩余 ¥{(totalBudget - total).toFixed(2)}，继续保持！</span>
-                  )}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+              {totalBudget > 0 && (
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
+                  <p className="text-indigo-100 text-xs mb-1">💰 预算健康度</p>
+                  <p className="font-medium">
+                    {total > totalBudget ? (
+                      <span className="text-red-300">已超支 ¥{(total - totalBudget).toFixed(2)}，请注意控制！</span>
+                    ) : (
+                      <span className="text-emerald-300">预算剩余 ¥{(totalBudget - total).toFixed(2)}，继续保持！</span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
 
-      {/* Pie Chart */}
-      {visibleMetrics.category && (chartData.length > 0 ? (
-        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">分类占比</h3>
+        {/* Pie Chart */}
+        {visibleMetrics.category && (chartData.length > 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">分类占比</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -303,11 +344,16 @@ export default function Statistics() {
               );
             })}
           </div>
-        </div>
+        </motion.div>
       ) : (
-        <div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center text-gray-400">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center text-gray-400"
+        >
           暂无数据
-        </div>
+        </motion.div>
       ))}
 
       {/* Fixed vs Variable Chart */}
@@ -383,6 +429,50 @@ export default function Statistics() {
         </div>
       )}
 
+      {/* Total Asset Trend Chart */}
+      {visibleMetrics.assetTrend && (
+        <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">总资产趋势 (近12个月)</h3>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={assetTrendData}>
+                <defs>
+                  <linearGradient id="colorAsset" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fontSize: 12, fill: '#9ca3af' }} 
+                  minTickGap={20}
+                />
+                <YAxis 
+                  hide 
+                  domain={['auto', 'auto']} 
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`¥${value.toFixed(2)}`, '总资产']}
+                  labelFormatter={(label, payload) => payload && payload.length > 0 ? payload[0].payload.fullMonth : label}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#10b981" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#colorAsset)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
       {/* Account Breakdown Chart */}
       {visibleMetrics.account && accountChartData.length > 0 && (
         <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100">
@@ -446,6 +536,7 @@ export default function Statistics() {
           </div>
         </div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

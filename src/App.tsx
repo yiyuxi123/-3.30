@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Home, List, PieChart, User, PlusCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Statistics from './pages/Statistics';
@@ -10,18 +11,42 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const pageVariants = {
+    initial: { opacity: 0, y: 10, scale: 0.98 },
+    in: { opacity: 1, y: 0, scale: 1 },
+    out: { opacity: 0, y: -10, scale: 0.98 }
+  };
+
+  const pageTransition = {
+    type: 'tween',
+    ease: 'anticipate',
+    duration: 0.3
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-20">
-        {activeTab === 'home' && <Dashboard onNavigate={setActiveTab} />}
-        {activeTab === 'transactions' && <Transactions />}
-        {activeTab === 'statistics' && <Statistics />}
-        {activeTab === 'accounts' && <Accounts />}
+      <main className="flex-1 overflow-y-auto pb-24 relative">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial="initial"
+            animate="in"
+            exit="out"
+            variants={pageVariants}
+            transition={pageTransition}
+            className="h-full"
+          >
+            {activeTab === 'home' && <Dashboard onNavigate={setActiveTab} />}
+            {activeTab === 'transactions' && <Transactions />}
+            {activeTab === 'statistics' && <Statistics />}
+            {activeTab === 'accounts' && <Accounts />}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 w-full bg-white border-t border-gray-200 px-6 py-2 flex justify-between items-center z-10 safe-area-pb">
+      <nav className="fixed bottom-0 w-full bg-white/80 backdrop-blur-md border-t border-gray-200/50 px-6 py-3 flex justify-between items-center z-10 safe-area-pb shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
         <NavItem 
           icon={<Home size={24} />} 
           label="首页" 
@@ -36,14 +61,15 @@ export default function App() {
         />
         
         {/* Add Button */}
-        <div className="relative -top-6">
-          <button 
+        <div className="relative -top-8">
+          <motion.button 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.9 }}
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-primary text-white p-4 rounded-full shadow-lg hover:bg-primary/90 transition-transform active:scale-95 flex items-center justify-center"
-            style={{ backgroundColor: '#10b981' }}
+            className="bg-emerald-500 text-white p-4 rounded-full shadow-[0_8px_20px_rgba(16,185,129,0.3)] flex items-center justify-center"
           >
             <PlusCircle size={32} />
-          </button>
+          </motion.button>
         </div>
 
         <NavItem 
@@ -61,12 +87,14 @@ export default function App() {
       </nav>
 
       {/* Add Transaction Modal */}
-      {isAddModalOpen && (
-        <AddTransactionModal 
-          isOpen={isAddModalOpen} 
-          onClose={() => setIsAddModalOpen(false)} 
-        />
-      )}
+      <AnimatePresence>
+        {isAddModalOpen && (
+          <AddTransactionModal 
+            isOpen={isAddModalOpen} 
+            onClose={() => setIsAddModalOpen(false)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -75,10 +103,18 @@ function NavItem({ icon, label, isActive, onClick }: { icon: React.ReactNode, la
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center justify-center space-y-1 w-16 ${isActive ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
+      className={`flex flex-col items-center justify-center space-y-1 w-16 transition-colors duration-200 ${isActive ? 'text-emerald-500' : 'text-gray-400 hover:text-gray-600'}`}
     >
-      {icon}
-      <span className="text-[10px] font-medium">{label}</span>
+      <motion.div
+        animate={{ 
+          y: isActive ? -2 : 0,
+          scale: isActive ? 1.1 : 1
+        }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      >
+        {icon}
+      </motion.div>
+      <span className={`text-[10px] font-medium transition-opacity duration-200 ${isActive ? 'opacity-100' : 'opacity-70'}`}>{label}</span>
     </button>
   );
 }

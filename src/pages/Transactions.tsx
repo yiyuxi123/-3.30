@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { format, isSameMonth, parseISO } from 'date-fns';
 import * as Icons from 'lucide-react';
 import { Filter, Search, List, Calendar as CalendarIcon, Eye, EyeOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import TransactionCalendar from '../components/TransactionCalendar';
 import { Transaction } from '../types';
@@ -128,7 +129,12 @@ export default function Transactions() {
               const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
 
               return (
-                <div key={month} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={month} 
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                >
                   {/* Month Header */}
                   <div className="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-100">
                     <h3 className="font-bold text-gray-900">{format(parseISO(`${month}-01`), 'yyyy年MM月')}</h3>
@@ -147,9 +153,11 @@ export default function Transactions() {
                       const toAccount = accounts.find(a => a.id === t.toAccountId);
                       
                       return (
-                        <div 
+                        <motion.div 
+                          whileHover={{ backgroundColor: '#f9fafb' }}
+                          whileTap={{ scale: 0.98 }}
                           key={t.id} 
-                          className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
+                          className="p-4 flex items-center justify-between cursor-pointer"
                           onClick={() => setSelectedTx(t)}
                         >
                           <div className="flex items-center space-x-4 flex-1 min-w-0">
@@ -189,11 +197,11 @@ export default function Transactions() {
                           <div className={`font-bold shrink-0 ml-4 ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
                             {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}¥{t.amount.toFixed(2)}
                           </div>
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
