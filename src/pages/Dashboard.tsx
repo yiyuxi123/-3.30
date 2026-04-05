@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff, PieChart as PieChartIcon } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, isWithinInterval, subMonths } from 'date-fns';
+import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { motion } from 'motion/react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import EditBudgetModal from '../components/EditBudgetModal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { Transaction } from '../types';
@@ -94,6 +94,33 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
       })
       .sort((a, b) => b.amount - a.amount);
   }, [currentMonthTransactions, categories]);
+
+  const monthlyTrendData = useMemo(() => {
+    const data = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = startOfMonth(subMonths(now, i));
+      const monthEnd = endOfMonth(subMonths(now, i));
+      const monthStr = format(monthStart, 'MM月');
+      
+      let exp = 0;
+      let inc = 0;
+      
+      filteredTransactions.forEach(t => {
+        const d = new Date(t.date);
+        if (isWithinInterval(d, { start: monthStart, end: monthEnd })) {
+          if (t.type === 'expense') exp += t.amount;
+          if (t.type === 'income') inc += t.amount;
+        }
+      });
+      
+      data.push({
+        name: monthStr,
+        支出: exp,
+        收入: inc
+      });
+    }
+    return data;
+  }, [filteredTransactions, now]);
 
   const recentTransactions = useMemo(() => filteredTransactions.slice(0, 5), [filteredTransactions]);
 
@@ -235,6 +262,36 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                 </div>
               </div>
             ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Monthly Trend Chart */}
+      {monthlyTrendData.length > 0 && (
+        <motion.div 
+          whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 transition-all"
+        >
+          <div className="flex items-center space-x-2 mb-4">
+            <BarChart3 size={18} className="text-blue-500" />
+            <h2 className="text-lg font-bold text-gray-900">收支趋势</h2>
+          </div>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={monthlyTrendData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <Tooltip 
+                  cursor={{ fill: '#f9fafb' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value: number) => `¥${value.toFixed(2)}`}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                <Bar dataKey="支出" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                <Bar dataKey="收入" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
       )}

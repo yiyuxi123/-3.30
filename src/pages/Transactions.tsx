@@ -13,6 +13,7 @@ export default function Transactions() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
@@ -44,10 +45,11 @@ export default function Transactions() {
                             categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm);
       const matchesType = filterType === 'all' || t.type === filterType;
       const matchesMonth = selectedMonth === 'all' || format(parseISO(t.date), 'yyyy-MM') === selectedMonth;
+      const matchesAccount = selectedAccount === 'all' || t.fromAccountId === selectedAccount || t.toAccountId === selectedAccount;
       
-      return matchesSearch && matchesType && matchesMonth;
+      return matchesSearch && matchesType && matchesMonth && matchesAccount;
     });
-  }, [transactions, categories, showReimbursables, searchTerm, filterType, selectedMonth]);
+  }, [transactions, categories, showReimbursables, searchTerm, filterType, selectedMonth, selectedAccount]);
 
   // Group by month
   const grouped = useMemo(() => {
@@ -95,31 +97,50 @@ export default function Transactions() {
         </div>
         
         {/* Search & Filter */}
-        <div className="flex space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="搜索备注或分类..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
-            />
+        <div className="flex flex-col space-y-2">
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="搜索备注或分类..." 
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+              />
+            </div>
           </div>
-          <div className="relative">
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm font-medium"
-            >
-              <option value="all">全部月份</option>
-              {availableMonths.map(month => (
-                <option key={month} value={month}>
-                  {format(parseISO(`${month}-01`), 'yyyy年MM月')}
-                </option>
-              ))}
-            </select>
-            <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full appearance-none pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm font-medium"
+              >
+                <option value="all">全部月份</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>
+                    {format(parseISO(`${month}-01`), 'yyyy年MM月')}
+                  </option>
+                ))}
+              </select>
+              <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
+            <div className="relative flex-1">
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="w-full appearance-none pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm font-medium"
+              >
+                <option value="all">全部账户</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+              <Icons.CreditCard size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         </div>
 
