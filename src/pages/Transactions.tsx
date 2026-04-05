@@ -12,8 +12,18 @@ export default function Transactions() {
   const { transactions, categories, accounts, showReimbursables, toggleShowReimbursables } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+
+  // Get unique months for filter
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    transactions.forEach(t => {
+      months.add(format(parseISO(t.date), 'yyyy-MM'));
+    });
+    return Array.from(months).sort().reverse(); // Newest first
+  }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
     const isReimbursableTx = (t: Transaction) => {
@@ -33,9 +43,11 @@ export default function Transactions() {
       const matchesSearch = t.note.toLowerCase().includes(lowerSearchTerm) || 
                             categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm);
       const matchesType = filterType === 'all' || t.type === filterType;
-      return matchesSearch && matchesType;
+      const matchesMonth = selectedMonth === 'all' || format(parseISO(t.date), 'yyyy-MM') === selectedMonth;
+      
+      return matchesSearch && matchesType && matchesMonth;
     });
-  }, [transactions, categories, showReimbursables, searchTerm, filterType]);
+  }, [transactions, categories, showReimbursables, searchTerm, filterType, selectedMonth]);
 
   // Group by month
   const grouped = useMemo(() => {
@@ -94,9 +106,21 @@ export default function Transactions() {
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
             />
           </div>
-          <button className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 flex items-center justify-center">
-            <Filter size={18} />
-          </button>
+          <div className="relative">
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm font-medium"
+            >
+              <option value="all">全部月份</option>
+              {availableMonths.map(month => (
+                <option key={month} value={month}>
+                  {format(parseISO(`${month}-01`), 'yyyy年MM月')}
+                </option>
+              ))}
+            </select>
+            <Filter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
         </div>
 
         {/* Type Tabs */}

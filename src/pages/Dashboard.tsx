@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Wallet, TrendingDown, TrendingUp, ChevronRight, Eye, EyeOff, PieChart as PieChartIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { motion } from 'motion/react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import EditBudgetModal from '../components/EditBudgetModal';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import { Transaction } from '../types';
@@ -71,6 +72,28 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
       .filter(t => t.type === 'expense' && t.isReimbursable && !t.isReimbursed)
       .reduce((sum, t) => sum + t.amount, 0);
   }, [transactions]);
+
+  const expensesByCategory = useMemo(() => {
+    const expenses = currentMonthTransactions.filter(t => t.type === 'expense');
+    const grouped = expenses.reduce((acc, t) => {
+      if (!acc[t.categoryId]) {
+        acc[t.categoryId] = 0;
+      }
+      acc[t.categoryId] += t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(grouped)
+      .map(([categoryId, amount]) => {
+        const category = categories.find(c => c.id === categoryId);
+        return {
+          name: category?.name || '未知',
+          amount,
+          color: category?.color || '#9ca3af'
+        };
+      })
+      .sort((a, b) => b.amount - a.amount);
+  }, [currentMonthTransactions, categories]);
 
   const recentTransactions = useMemo(() => filteredTransactions.slice(0, 5), [filteredTransactions]);
 
@@ -163,6 +186,58 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           />
         </div>
       </motion.div>
+
+      {/* Expenses Chart */}
+      {expensesByCategory.length > 0 && (
+        <motion.div 
+          whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 transition-all"
+        >
+          <div className="flex items-center space-x-2 mb-4">
+            <PieChartIcon size={18} className="text-indigo-500" />
+            <h2 className="text-lg font-bold text-gray-900">支出分布</h2>
+          </div>
+          <div className="h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={expensesByCategory}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="amount"
+                >
+                  {expensesByCategory.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number) => `¥${value.toFixed(2)}`}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="mt-4 space-y-2">
+            {expensesByCategory.slice(0, 3).map((item, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-gray-600">{item.name}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="font-medium text-gray-900">¥{item.amount.toFixed(2)}</span>
+                  <span className="text-gray-400 text-xs w-8 text-right">
+                    {((item.amount / expense) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Recent Transactions */}
       <div>
