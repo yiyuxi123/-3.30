@@ -42,7 +42,7 @@ export default function Accounts() {
   const escapeCSV = (str: string | undefined) => `"${String(str || '').replace(/"/g, '""')}"`;
 
   const handleExportTransactions = () => {
-    const headers = ['交易ID', '类型', '金额', '日期', '分类', '付款账户', '收款账户', '备注'];
+    const headers = ['交易ID', '类型', '金额', '日期', '分类', '付款账户', '收款账户', '备注', '标签'];
     const rows = transactions.map(t => {
       const category = categories.find(c => c.id === t.categoryId)?.name || '';
       const fromAcc = accounts.find(a => a.id === t.fromAccountId)?.name || '';
@@ -55,7 +55,8 @@ export default function Accounts() {
         escapeCSV(category),
         escapeCSV(fromAcc),
         escapeCSV(toAcc),
-        escapeCSV(t.note)
+        escapeCSV(t.note),
+        escapeCSV(t.tags ? t.tags.join(', ') : '')
       ];
     });
     exportToCSV(`transactions_${format(new Date(), 'yyyyMMdd')}.csv`, [headers, ...rows]);

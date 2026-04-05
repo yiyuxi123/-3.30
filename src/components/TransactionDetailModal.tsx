@@ -151,6 +151,22 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
                 </div>
               </div>
             )}
+
+            {transaction.tags && transaction.tags.length > 0 && (
+              <div className="pt-3 mt-3 border-t border-gray-200/60">
+                <div className="flex items-center space-x-2 text-gray-500 mb-2">
+                  <Tag size={18} />
+                  <span className="text-sm">标签</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {transaction.tags.map((tag, index) => (
+                    <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {transaction.history && transaction.history.length > 0 && (

@@ -14,6 +14,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [note, setNote] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [isReimbursable, setIsReimbursable] = useState(false);
   const [selectedReimbursableIds, setSelectedReimbursableIds] = useState<string[]>([]);
@@ -27,6 +28,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setFromAccountId(initialTransaction.fromAccountId || '');
         setToAccountId(initialTransaction.toAccountId || '');
         setNote(initialTransaction.note || '');
+        setTagsInput(initialTransaction.tags ? initialTransaction.tags.join(', ') : '');
         setDate(format(parseISO(initialTransaction.date), "yyyy-MM-dd'T'HH:mm"));
         setIsReimbursable(initialTransaction.isReimbursable || false);
         setSelectedReimbursableIds(initialTransaction.reimbursedTxIds || []);
@@ -43,6 +45,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setIsReimbursable(false);
         setSelectedReimbursableIds([]);
         setAmount('');
+        setTagsInput('');
       }
     }
   }, [isOpen, initialTransaction, type, categories, accounts]);
@@ -69,6 +72,8 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
     if (e) e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
 
+    const tags = tagsInput.split(/[,，\s]+/).map(t => t.trim()).filter(t => t);
+
     const txData = {
       type,
       amount: Number(amount),
@@ -77,6 +82,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       fromAccountId: type !== 'income' ? fromAccountId : undefined,
       toAccountId: type !== 'expense' ? toAccountId : undefined,
       note,
+      tags: tags.length > 0 ? tags : undefined,
       isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined,
       reimbursedTxIds: type === 'income' && selectedCategory?.name === '报销款' ? selectedReimbursableIds : undefined
     };
@@ -246,7 +252,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
             )}
           </div>
 
-          {/* Date & Note */}
+          {/* Date & Note & Tags */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">日期</label>
@@ -267,6 +273,16 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
                 className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
               />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">标签 (用空格或逗号分隔)</label>
+            <input 
+              type="text" 
+              value={tagsInput}
+              onChange={e => setTagsInput(e.target.value)}
+              placeholder="例如: 旅游 聚餐"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+            />
           </div>
 
           {/* Reimbursable Checkbox */}

@@ -42,7 +42,9 @@ export default function Transactions() {
       if (!showReimbursables && isReimbursableTx(t)) return false;
       
       const matchesSearch = t.note.toLowerCase().includes(lowerSearchTerm) || 
-                            categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm);
+                            categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm) ||
+                            (t.tags && t.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm))) ||
+                            t.amount.toString().includes(lowerSearchTerm);
       const matchesType = filterType === 'all' || t.type === filterType;
       const matchesMonth = selectedMonth === 'all' || format(parseISO(t.date), 'yyyy-MM') === selectedMonth;
       const matchesAccount = selectedAccount === 'all' || t.fromAccountId === selectedAccount || t.toAccountId === selectedAccount;
@@ -103,7 +105,7 @@ export default function Transactions() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
                 type="text" 
-                placeholder="搜索备注或分类..." 
+                placeholder="搜索备注、分类、标签或金额..." 
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
@@ -241,6 +243,15 @@ export default function Transactions() {
                                   <p className="text-xs text-gray-600 truncate bg-gray-100/80 px-1.5 py-0.5 rounded w-fit max-w-full">
                                     {t.note}
                                   </p>
+                                )}
+                                {t.tags && t.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {t.tags.map((tag, i) => (
+                                      <span key={i} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">
+                                        #{tag}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             </div>

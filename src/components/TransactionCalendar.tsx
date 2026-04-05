@@ -191,6 +191,15 @@ export default function TransactionCalendar() {
                             {t.note}
                           </p>
                         )}
+                        {t.tags && t.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {t.tags.map((tag, i) => (
+                              <span key={i} className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

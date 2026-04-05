@@ -36,6 +36,7 @@ export interface Transaction {
   fromAccountId?: string; // For expense/transfer
   toAccountId?: string; // For income/transfer
   note: string;
+  tags?: string[]; // Added tags
   isReimbursable?: boolean;
   isReimbursed?: boolean;
   reimbursedTxIds?: string[];
