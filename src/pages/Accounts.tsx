@@ -72,6 +72,66 @@ export default function Accounts() {
     exportToCSV(`accounts_${format(new Date(), 'yyyyMMdd')}.csv`, [headers, ...rows]);
   };
 
+  const handleBackup = () => {
+    const data = {
+      accounts,
+      transactions,
+      categories,
+      version: 1,
+      timestamp: new Date().toISOString()
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `money_tracker_backup_${format(new Date(), 'yyyyMMdd_HHmmss')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target?.result as string);
+        if (data.accounts && data.transactions && data.categories) {
+          if (window.confirm('恢复数据将覆盖当前所有数据，确定要继续吗？')) {
+            useStore.setState({
+              accounts: data.accounts,
+              transactions: data.transactions,
+              categories: data.categories
+            });
+            alert('数据恢复成功！');
+          }
+        } else {
+          alert('无效的备份文件格式。');
+        }
+      } catch (error) {
+        alert('读取备份文件失败，请确保文件格式正确。');
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('警告：此操作将清空所有账户、账单和分类数据，且不可恢复！确定要继续吗？')) {
+      if (window.confirm('再次确认：您真的要清空所有数据吗？')) {
+        useStore.setState({
+          accounts: [],
+          transactions: [],
+          categories: []
+        });
+        alert('所有数据已清空。');
+      }
+    }
+  };
+
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
       {/* Header */}
@@ -147,7 +207,7 @@ export default function Accounts() {
       {/* Data Management */}
       <div className="space-y-4 pt-4">
         <h3 className="text-lg font-bold text-gray-900">系统设置</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <motion.button 
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
             whileTap={{ scale: 0.95 }}
@@ -174,6 +234,41 @@ export default function Accounts() {
           >
             <Download size={24} className="text-blue-500" />
             <span className="text-sm font-medium">导出资产</span>
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleBackup}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
+          >
+            <Icons.Save size={24} className="text-indigo-500" />
+            <span className="text-sm font-medium">备份数据</span>
+          </motion.button>
+          <div className="relative">
+            <input 
+              type="file" 
+              accept=".json" 
+              onChange={handleRestore} 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+              title="恢复数据"
+            />
+            <motion.div 
+              whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white h-full p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
+            >
+              <Icons.Upload size={24} className="text-orange-500" />
+              <span className="text-sm font-medium">恢复数据</span>
+            </motion.div>
+          </div>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleClearAll}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex flex-col items-center justify-center space-y-2 transition-all text-red-600 hover:bg-red-50"
+          >
+            <Icons.Trash2 size={24} className="text-red-500" />
+            <span className="text-sm font-medium">清空数据</span>
           </motion.button>
         </div>
       </div>

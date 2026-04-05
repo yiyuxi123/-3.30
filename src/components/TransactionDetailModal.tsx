@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, Calendar, Tag, CreditCard, AlignLeft, ArrowRight, Edit2, History } from 'lucide-react';
+import { X, Trash2, Calendar, Tag, CreditCard, AlignLeft, ArrowRight, Edit2, History, Copy } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { Transaction } from '../types';
 import { format, parseISO } from 'date-fns';
@@ -11,6 +11,7 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
   const [showConfirm, setShowConfirm] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
   if (!transaction) return null;
 
@@ -64,7 +65,10 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">账单详情</h2>
             <div className="flex items-center space-x-2">
-              <button onClick={() => setIsEditModalOpen(true)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+              <button onClick={() => setIsDuplicateModalOpen(true)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors" title="复制记录">
+                <Copy size={20} />
+              </button>
+              <button onClick={() => setIsEditModalOpen(true)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors" title="编辑记录">
                 <Edit2 size={20} />
               </button>
               <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
@@ -210,6 +214,21 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
           onClose(); // Close detail modal after editing
         }} 
         initialTransaction={transaction}
+      />
+    )}
+    {isDuplicateModalOpen && (
+      <AddTransactionModal 
+        isOpen={isDuplicateModalOpen} 
+        onClose={() => {
+          setIsDuplicateModalOpen(false);
+          onClose(); // Close detail modal after duplicating
+        }} 
+        initialTransaction={{
+          ...transaction,
+          id: '', // Clear ID to create a new one
+          date: new Date().toISOString(), // Default to today
+          history: [] // Clear history
+        }}
       />
     )}
     </>

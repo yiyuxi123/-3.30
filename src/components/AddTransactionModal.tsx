@@ -6,7 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { Transaction } from '../types';
 import { motion } from 'motion/react';
 
-export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction }) {
+export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction, key?: string | number }) {
   const { categories, accounts, addTransaction, updateTransaction, transactions } = useStore();
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
@@ -81,7 +81,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       reimbursedTxIds: type === 'income' && selectedCategory?.name === '报销款' ? selectedReimbursableIds : undefined
     };
 
-    if (initialTransaction) {
+    if (initialTransaction && initialTransaction.id) {
       updateTransaction(initialTransaction.id, txData);
     } else {
       addTransaction(txData);
