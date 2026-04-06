@@ -36,6 +36,7 @@ export default function Statistics() {
     fixedVsVariable: true,
     account: false,
     assetTrend: true,
+    tags: false,
   });
 
   const toggleMetric = (key: keyof typeof visibleMetrics) => {
@@ -136,6 +137,28 @@ export default function Statistics() {
     return Object.values(accountData).sort((a: any, b: any) => b.value - a.value);
   }, [filteredTransactions, type, accounts]);
 
+  // Tag data
+  const tagChartData = useMemo(() => {
+    const tagData = filteredTransactions.reduce((acc, t) => {
+      if (t.tags && t.tags.length > 0) {
+        t.tags.forEach(tag => {
+          if (!acc[tag]) {
+            acc[tag] = { name: tag, value: 0 };
+          }
+          acc[tag].value += t.amount;
+        });
+      } else {
+        if (!acc['无标签']) {
+          acc['无标签'] = { name: '无标签', value: 0 };
+        }
+        acc['无标签'].value += t.amount;
+      }
+      return acc;
+    }, {} as Record<string, { name: string, value: number }>);
+
+    return Object.values(tagData).sort((a: any, b: any) => b.value - a.value);
+  }, [filteredTransactions]);
+
   // Insights calculations
   const maxCategory = useMemo(() => chartData.length > 0 ? chartData[0] : null, [chartData]);
   const maxTrend = useMemo(() => barData.length > 0 ? barData.reduce((max, d) => d.value > max.value ? d : max, barData[0]) : null, [barData]);
@@ -229,6 +252,7 @@ export default function Statistics() {
               <button onClick={() => toggleMetric('fixedVsVariable')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.fixedVsVariable ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>固定/浮动</button>
             )}
             <button onClick={() => toggleMetric('account')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.account ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>账户分布</button>
+            <button onClick={() => toggleMetric('tags')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.tags ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>标签统计</button>
           </div>
         </div>
       </header>
@@ -592,6 +616,48 @@ export default function Statistics() {
           暂无数据
         </motion.div>
       ))}
+        {/* Tags Breakdown */}
+        {visibleMetrics.tags && tagChartData.length > 0 && (
+          <motion.div 
+            key="tags"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100"
+          >
+            <div className="flex items-center space-x-2 mb-6">
+              <Icons.Tag size={20} className="text-purple-500" />
+              <h3 className="text-lg font-bold text-gray-900">标签统计</h3>
+            </div>
+            
+            <div className="space-y-4">
+              {tagChartData.map((item, index) => {
+                const percent = ((item.value / total) * 100).toFixed(1);
+                const isNoTag = item.name === '无标签';
+                
+                return (
+                  <div key={index} className="relative">
+                    <div className="flex justify-between items-end mb-1">
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${isNoTag ? 'text-gray-500' : 'text-gray-900'}`}>{item.name}</span>
+                        <span className="text-xs text-gray-400">{percent}%</span>
+                      </div>
+                      <span className="font-bold text-gray-900">¥{item.value.toFixed(2)}</span>
+                    </div>
+                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${percent}%` }}
+                        transition={{ duration: 1, delay: index * 0.1 }}
+                        className={`h-full rounded-full ${isNoTag ? 'bg-gray-300' : 'bg-purple-500'}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

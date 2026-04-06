@@ -53,6 +53,37 @@ export default function Transactions() {
     });
   }, [transactions, categories, showReimbursables, searchTerm, filterType, selectedMonth, selectedAccount]);
 
+  const escapeCSV = (str: string | undefined) => `"${String(str || '').replace(/"/g, '""')}"`;
+
+  const handleExportFiltered = () => {
+    const headers = ['交易ID', '类型', '金额', '日期', '分类', '付款账户', '收款账户', '备注', '标签'];
+    const rows = filteredTransactions.map(t => {
+      const category = categories.find(c => c.id === t.categoryId)?.name || '';
+      const fromAcc = accounts.find(a => a.id === t.fromAccountId)?.name || '';
+      const toAcc = accounts.find(a => a.id === t.toAccountId)?.name || '';
+      return [
+        escapeCSV(t.id),
+        escapeCSV(t.type === 'expense' ? '支出' : t.type === 'income' ? '收入' : '转账'),
+        escapeCSV(t.amount.toString()),
+        escapeCSV(format(parseISO(t.date), 'yyyy-MM-dd HH:mm:ss')),
+        escapeCSV(category),
+        escapeCSV(fromAcc),
+        escapeCSV(toAcc),
+        escapeCSV(t.note),
+        escapeCSV(t.tags ? t.tags.join(', ') : '')
+      ];
+    });
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `transactions_filtered_${format(new Date(), 'yyyyMMdd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Group by month
   const grouped = useMemo(() => {
     return filteredTransactions.reduce((acc, t) => {
@@ -80,6 +111,13 @@ export default function Transactions() {
             >
               {showReimbursables ? <Eye size={14} /> : <EyeOff size={14} />}
               <span>{showReimbursables ? '含报销' : '不含报销'}</span>
+            </button>
+            <button 
+              onClick={handleExportFiltered}
+              className="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
+              title="导出当前筛选结果"
+            >
+              <Icons.Download size={18} />
             </button>
             <div className="flex bg-gray-200 p-1 rounded-xl">
               <button 

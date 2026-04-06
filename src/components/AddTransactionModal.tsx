@@ -18,6 +18,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [isReimbursable, setIsReimbursable] = useState(false);
   const [selectedReimbursableIds, setSelectedReimbursableIds] = useState<string[]>([]);
+  const [fee, setFee] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +33,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setDate(format(parseISO(initialTransaction.date), "yyyy-MM-dd'T'HH:mm"));
         setIsReimbursable(initialTransaction.isReimbursable || false);
         setSelectedReimbursableIds(initialTransaction.reimbursedTxIds || []);
+        setFee('');
       } else {
         // Set defaults
         const defaultExpenseCat = categories.find(c => c.type === 'expense');
@@ -46,6 +48,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setSelectedReimbursableIds([]);
         setAmount('');
         setTagsInput('');
+        setFee('');
       }
     }
   }, [isOpen, initialTransaction, type, categories, accounts]);
@@ -91,6 +94,27 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       updateTransaction(initialTransaction.id, txData);
     } else {
       addTransaction(txData);
+      
+      // Handle transfer fee
+      if (type === 'transfer' && fee && !isNaN(Number(fee)) && Number(fee) > 0) {
+        // Find a fee category or use the first expense category
+        let feeCategory = categories.find(c => c.type === 'expense' && (c.name.includes('手续费') || c.name.includes('转账')));
+        if (!feeCategory) {
+          feeCategory = categories.find(c => c.type === 'expense');
+        }
+        
+        if (feeCategory) {
+          addTransaction({
+            type: 'expense',
+            amount: Number(fee),
+            date: new Date(date).toISOString(),
+            categoryId: feeCategory.id,
+            fromAccountId: fromAccountId,
+            note: `${note ? note + ' - ' : ''}转账手续费`,
+            tags: tags.length > 0 ? tags : undefined,
+          });
+        }
+      }
     }
     onClose();
   };
@@ -124,6 +148,23 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   };
 
   const [showNumpad, setShowNumpad] = useState(false);
+
+  const availableTags = React.useMemo(() => {
+    const tags = new Set<string>();
+    transactions.forEach(t => {
+      if (t.tags) {
+        t.tags.forEach(tag => tags.add(tag));
+      }
+    });
+    return Array.from(tags);
+  }, [transactions]);
+
+  const handleTagClick = (tag: string) => {
+    const currentTags = tagsInput.split(/[,，\s]+/).map(t => t.trim()).filter(t => t);
+    if (!currentTags.includes(tag)) {
+      setTagsInput(currentTags.length > 0 ? `${currentTags.join(' ')} ${tag}` : tag);
+    }
+  };
 
   return (
     <motion.div 
@@ -274,6 +315,22 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
               />
             </div>
           </div>
+          
+          {type === 'transfer' && !initialTransaction && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">转账手续费 (选填)</label>
+              <input 
+                type="number" 
+                value={fee}
+                onChange={e => setFee(e.target.value)}
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">标签 (用空格或逗号分隔)</label>
             <input 
@@ -281,8 +338,22 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
               value={tagsInput}
               onChange={e => setTagsInput(e.target.value)}
               placeholder="例如: 旅游 聚餐"
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm mb-2"
             />
+            {availableTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {availableTags.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleTagClick(tag)}
+                    className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Reimbursable Checkbox */}
