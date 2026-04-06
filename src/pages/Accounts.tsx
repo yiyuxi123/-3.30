@@ -221,6 +221,32 @@ export default function Accounts() {
           <motion.button 
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              const { templates, deleteTemplate } = useStore.getState();
+              if (templates && templates.length > 0) {
+                const templateNames = templates.map((t, i) => `${i + 1}. ${t.name}`).join('\n');
+                const idToDelete = prompt(`当前有以下模板：\n${templateNames}\n\n请输入要删除的模板编号 (1-${templates.length})，或点击取消：`);
+                if (idToDelete) {
+                  const index = parseInt(idToDelete) - 1;
+                  if (index >= 0 && index < templates.length) {
+                    deleteTemplate(templates[index].id);
+                    alert('模板已删除');
+                  } else {
+                    alert('无效的编号');
+                  }
+                }
+              } else {
+                alert('暂无快捷记账模板');
+              }
+            }}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
+          >
+            <Icons.Zap size={24} className="text-yellow-500" />
+            <span className="text-sm font-medium">模板管理</span>
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleExportTransactions}
             className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
           >

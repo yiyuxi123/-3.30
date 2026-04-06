@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Account, Budget, Category, Transaction } from '../types';
+import { Account, Budget, Category, Transaction, TransactionTemplate } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AppState {
@@ -8,6 +8,7 @@ interface AppState {
   categories: Category[];
   transactions: Transaction[];
   budgets: Budget[];
+  templates: TransactionTemplate[];
 
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
@@ -25,6 +26,9 @@ interface AppState {
   addBudget: (budget: Omit<Budget, 'id'>) => void;
   updateBudget: (id: string, budget: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
+
+  addTemplate: (template: Omit<TransactionTemplate, 'id'>) => void;
+  deleteTemplate: (id: string) => void;
 
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
@@ -56,6 +60,7 @@ export const useStore = create<AppState>()(
       budgets: [
         { id: '1', amount: 5000, period: 'monthly' } // Default total monthly budget
       ],
+      templates: [],
       showReimbursables: true,
 
       toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
@@ -235,6 +240,9 @@ export const useStore = create<AppState>()(
       addBudget: (budget) => set((state) => ({ budgets: [...state.budgets, { ...budget, id: uuidv4() }] })),
       updateBudget: (id, budget) => set((state) => ({ budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...budget } : b)) })),
       deleteBudget: (id) => set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) })),
+
+      addTemplate: (template) => set((state) => ({ templates: [...(state.templates || []), { ...template, id: uuidv4() }] })),
+      deleteTemplate: (id) => set((state) => ({ templates: (state.templates || []).filter((t) => t.id !== id) })),
     }),
     {
       name: 'bookkeeping-storage',

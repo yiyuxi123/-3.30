@@ -65,6 +65,26 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">账单详情</h2>
             <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => {
+                  const { addTemplate } = useStore.getState();
+                  addTemplate({
+                    name: `${transaction.type === 'transfer' ? '转账' : category?.name || '未知'}模板`,
+                    type: transaction.type,
+                    amount: transaction.amount,
+                    categoryId: transaction.categoryId,
+                    fromAccountId: transaction.fromAccountId,
+                    toAccountId: transaction.toAccountId,
+                    note: transaction.note,
+                    tags: transaction.tags
+                  });
+                  alert('已保存为快捷记账模板');
+                }} 
+                className="p-2 text-gray-400 hover:text-emerald-600 rounded-full hover:bg-emerald-50 transition-colors" 
+                title="保存为模板"
+              >
+                <Icons.BookmarkPlus size={20} />
+              </button>
               <button onClick={() => setIsDuplicateModalOpen(true)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors" title="复制记录">
                 <Copy size={20} />
               </button>

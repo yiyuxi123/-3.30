@@ -67,6 +67,24 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
     };
   }, [budgets, expense]);
 
+  const categoryBudgets = useMemo(() => {
+    return budgets.filter(b => b.categoryId).map(b => {
+      const category = categories.find(c => c.id === b.categoryId);
+      const catExpense = currentMonthTransactions
+        .filter(t => t.type === 'expense' && t.categoryId === b.categoryId)
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      return {
+        ...b,
+        categoryName: category?.name || '未知',
+        color: category?.color || '#9ca3af',
+        expense: catExpense,
+        remaining: b.amount - catExpense,
+        percent: b.amount > 0 ? (catExpense / b.amount) * 100 : 0
+      };
+    }).sort((a, b) => b.percent - a.percent);
+  }, [budgets, categories, currentMonthTransactions]);
+
   const reimbursableAmount = useMemo(() => {
     return transactions
       .filter(t => t.type === 'expense' && t.isReimbursable && !t.isReimbursed)
@@ -123,6 +141,22 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   }, [filteredTransactions, now]);
 
   const recentTransactions = useMemo(() => filteredTransactions.slice(0, 5), [filteredTransactions]);
+  const templates = useStore(state => state.templates) || [];
+
+  const handleQuickAdd = (template: any) => {
+    const { addTransaction } = useStore.getState();
+    addTransaction({
+      type: template.type,
+      amount: template.amount || 0,
+      categoryId: template.categoryId,
+      fromAccountId: template.fromAccountId,
+      toAccountId: template.toAccountId,
+      note: template.note || '',
+      tags: template.tags || [],
+      date: new Date().toISOString()
+    });
+    alert('已快捷记账');
+  };
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
@@ -190,6 +224,43 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
         </motion.div>
       )}
 
+      {/* Quick Add Templates */}
+      {templates.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center space-x-2 text-gray-900">
+            <Icons.Zap size={18} className="text-yellow-500" />
+            <h2 className="text-lg font-bold">快捷记账</h2>
+          </div>
+          <div className="flex overflow-x-auto pb-2 -mx-4 px-4 space-x-3 snap-x">
+            {templates.map(template => {
+              const category = categories.find(c => c.id === template.categoryId);
+              const IconComponent = category ? (Icons as any)[category.icon] : Icons.ArrowRightLeft;
+              return (
+                <motion.button
+                  key={template.id}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleQuickAdd(template)}
+                  className="snap-start shrink-0 bg-white border border-gray-100 shadow-sm rounded-xl p-3 flex items-center space-x-3 min-w-[140px] text-left"
+                >
+                  <div 
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: template.type === 'transfer' ? '#6b7280' : category?.color || '#9ca3af' }}
+                  >
+                    {IconComponent && <IconComponent size={20} />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 truncate max-w-[80px]">{template.name}</p>
+                    <p className={`text-xs font-bold ${template.type === 'expense' ? 'text-gray-900' : template.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
+                      {template.type === 'expense' ? '-' : template.type === 'income' ? '+' : ''}¥{template.amount?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Budget Progress */}
       <motion.div 
         whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
@@ -199,7 +270,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
       >
         <div className="flex justify-between items-end mb-2">
           <div>
-            <p className="text-sm text-gray-500 font-medium mb-1">剩余预算</p>
+            <p className="text-sm text-gray-500 font-medium mb-1">剩余总预算</p>
             <p className="text-3xl font-bold text-gray-900">¥{budgetRemaining.toFixed(2)}</p>
           </div>
           <p className="text-sm text-gray-400">总预算 ¥{totalBudget}</p>
@@ -212,6 +283,34 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             className={`h-full rounded-full ${budgetPercent > 90 ? 'bg-red-500' : 'bg-emerald-500'}`}
           />
         </div>
+        
+        {/* Category Budgets */}
+        {categoryBudgets.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-gray-100 space-y-3">
+            {categoryBudgets.map(cb => (
+              <div key={cb.id}>
+                <div className="flex justify-between items-center mb-1">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cb.color }} />
+                    <span className="text-xs font-medium text-gray-700">{cb.categoryName}</span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    ¥{cb.expense.toFixed(0)} / ¥{cb.amount.toFixed(0)}
+                  </span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(cb.percent, 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full rounded-full ${cb.percent > 90 ? 'bg-red-500' : ''}`}
+                    style={{ backgroundColor: cb.percent > 90 ? undefined : cb.color }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       {/* Expenses Chart */}

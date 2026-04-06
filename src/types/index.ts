@@ -44,6 +44,18 @@ export interface Transaction {
   history?: TransactionHistory[];
 }
 
+export interface TransactionTemplate {
+  id: string;
+  name: string;
+  type: TransactionType;
+  amount?: number;
+  categoryId?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
+  note?: string;
+  tags?: string[];
+}
+
 export interface Budget {
   id: string;
   categoryId?: string; // If undefined, it's a total budget
