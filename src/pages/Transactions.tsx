@@ -16,6 +16,30 @@ export default function Transactions() {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  
+  // Batch Operations State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { deleteTransaction } = useStore();
+
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) {
+      selectedIds.forEach(id => deleteTransaction(id));
+      setSelectedIds(new Set());
+      setIsSelectionMode(false);
+    }
+  };
 
   // Get unique months for filter
   const availableMonths = useMemo(() => {
@@ -118,6 +142,16 @@ export default function Transactions() {
               title="导出当前筛选结果"
             >
               <Icons.Download size={18} />
+            </button>
+            <button 
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                if (isSelectionMode) setSelectedIds(new Set());
+              }}
+              className={`p-1.5 rounded-lg transition-colors ${isSelectionMode ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200'}`}
+              title={isSelectionMode ? "取消批量操作" : "批量操作"}
+            >
+              <Icons.CheckSquare size={18} />
             </button>
             <div className="flex bg-gray-200 p-1 rounded-xl">
               <button 
@@ -246,12 +280,25 @@ export default function Transactions() {
                       return (
                         <motion.div 
                           whileHover={{ backgroundColor: '#f9fafb' }}
-                          whileTap={{ scale: 0.98 }}
+                          whileTap={isSelectionMode ? undefined : { scale: 0.98 }}
                           key={t.id} 
-                          className="p-4 flex items-center justify-between cursor-pointer"
-                          onClick={() => setSelectedTx(t)}
+                          className={`p-4 flex items-center justify-between cursor-pointer ${isSelectionMode && selectedIds.has(t.id) ? 'bg-emerald-50/50' : ''}`}
+                          onClick={() => {
+                            if (isSelectionMode) {
+                              toggleSelection(t.id);
+                            } else {
+                              setSelectedTx(t);
+                            }
+                          }}
                         >
                           <div className="flex items-center space-x-4 flex-1 min-w-0">
+                            {isSelectionMode && (
+                              <div className="shrink-0 mr-2">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedIds.has(t.id) ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 bg-white'}`}>
+                                  {selectedIds.has(t.id) && <Icons.Check size={14} />}
+                                </div>
+                              </div>
+                            )}
                             <div 
                               className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0"
                               style={{ backgroundColor: t.type === 'transfer' ? '#6b7280' : category?.color || '#9ca3af' }}
@@ -309,6 +356,52 @@ export default function Transactions() {
       )}
 
       {selectedTx && <TransactionDetailModal transaction={selectedTx} onClose={() => setSelectedTx(null)} />}
+
+      {/* Batch Operations Floating Bar */}
+      <AnimatePresence>
+        {isSelectionMode && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            className="fixed bottom-24 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-md bg-gray-900 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between z-40"
+          >
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => {
+                  if (selectedIds.size === filteredTransactions.length) {
+                    setSelectedIds(new Set());
+                  } else {
+                    setSelectedIds(new Set(filteredTransactions.map(t => t.id)));
+                  }
+                }}
+                className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                {selectedIds.size === filteredTransactions.length ? '取消全选' : '全选'}
+              </button>
+              <span className="text-sm">已选 {selectedIds.size} 项</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button 
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedIds(new Set());
+                }}
+                className="px-3 py-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={handleBatchDelete}
+                disabled={selectedIds.size === 0}
+                className={`px-4 py-1.5 rounded-xl text-sm font-bold transition-colors ${selectedIds.size > 0 ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+              >
+                删除
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

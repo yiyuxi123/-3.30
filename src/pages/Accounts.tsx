@@ -6,7 +6,8 @@ import { motion } from 'motion/react';
 import AddAccountModal from '../components/AddAccountModal';
 import EditAccountModal from '../components/EditAccountModal';
 import CategoryManagementModal from '../components/CategoryManagementModal';
-import { Account } from '../types';
+import GoalModal from '../components/GoalModal';
+import { Account, SavingGoal } from '../types';
 import { format, parseISO } from 'date-fns';
 
 export default function Accounts() {
@@ -14,6 +15,8 @@ export default function Accounts() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<SavingGoal | null>(null);
 
   const { totalBalance, totalAssets, totalLiabilities } = useMemo(() => {
     let balance = 0;
@@ -205,6 +208,80 @@ export default function Accounts() {
         </div>
       </div>
 
+      {/* Goals List */}
+      <div className="space-y-4 pt-2">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-bold text-gray-900">存钱目标</h3>
+          <button 
+            onClick={() => setIsAddGoalOpen(true)}
+            className="text-sm text-emerald-600 font-medium hover:text-emerald-700 transition-colors"
+          >
+            添加目标
+          </button>
+        </div>
+        
+        {useStore(state => state.goals || []).length === 0 ? (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+            <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <Icons.Target size={24} className="text-emerald-500" />
+            </div>
+            <p className="text-gray-500 text-sm">还没有存钱目标，定个小目标吧！</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {useStore(state => state.goals || []).map((goal, index) => {
+              const IconComponent = (Icons as any)[goal.icon] || Icons.Target;
+              const percent = Math.min(100, Math.max(0, (goal.currentAmount / goal.targetAmount) * 100));
+              
+              return (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+                  whileTap={{ scale: 0.98 }}
+                  key={goal.id} 
+                  className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 cursor-pointer transition-all"
+                  onClick={() => setSelectedGoal(goal)}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-inner"
+                        style={{ backgroundColor: goal.color }}
+                      >
+                        <IconComponent size={20} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900">{goal.name}</h4>
+                        {goal.deadline && (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            目标日期: {goal.deadline.split('T')[0]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">¥{goal.currentAmount.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">/ ¥{goal.targetAmount.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${percent}%` }}
+                      transition={{ duration: 1, delay: 0.2 }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: goal.color }}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Data Management */}
       <div className="space-y-4 pt-4">
         <h3 className="text-lg font-bold text-gray-900">系统设置</h3>
@@ -303,6 +380,8 @@ export default function Accounts() {
       {isAddOpen && <AddAccountModal onClose={() => setIsAddOpen(false)} />}
       {isCategoryOpen && <CategoryManagementModal onClose={() => setIsCategoryOpen(false)} />}
       {selectedAccount && <EditAccountModal account={selectedAccount} onClose={() => setSelectedAccount(null)} />}
+      <GoalModal isOpen={isAddGoalOpen} onClose={() => setIsAddGoalOpen(false)} />
+      <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
     </div>
   );
 }

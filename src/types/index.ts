@@ -62,3 +62,13 @@ export interface Budget {
   amount: number;
   period: 'monthly' | 'yearly';
 }
+
+export interface SavingGoal {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string; // ISO string
+  color: string;
+  icon: string;
+}
