@@ -9,7 +9,7 @@ import TransactionCalendar from '../components/TransactionCalendar';
 import { Transaction } from '../types';
 
 export default function Transactions() {
-  const { transactions, categories, accounts, showReimbursables, toggleShowReimbursables, privacyMode, togglePrivacyMode } = useStore();
+  const { transactions, categories, accounts, showReimbursables, toggleShowReimbursables } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'expense' | 'income' | 'transfer'>('all');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
@@ -125,13 +125,6 @@ export default function Transactions() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold text-gray-900">账单明细</h1>
           <div className="flex items-center space-x-3">
-            <button 
-              onClick={togglePrivacyMode}
-              className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              title={privacyMode ? "显示金额" : "隐藏金额"}
-            >
-              {privacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
             <button 
               onClick={toggleShowReimbursables}
               className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -271,8 +264,8 @@ export default function Transactions() {
                   <div className="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-100">
                     <h3 className="font-bold text-gray-900">{format(parseISO(`${month}-01`), 'yyyy年MM月')}</h3>
                     <div className="text-xs text-gray-500 flex space-x-3">
-                      <span>支 {privacyMode ? '****' : `¥${monthExpense.toFixed(2)}`}</span>
-                      <span>收 {privacyMode ? '****' : `¥${monthIncome.toFixed(2)}`}</span>
+                      <span>支 ¥{monthExpense.toFixed(2)}</span>
+                      <span>收 ¥{monthIncome.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -349,7 +342,7 @@ export default function Transactions() {
                             </div>
                           </div>
                           <div className={`font-bold shrink-0 ml-4 ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
-                            {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}{privacyMode ? '****' : `¥${t.amount.toFixed(2)}`}
+                            {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}¥{t.amount.toFixed(2)}
                           </div>
                         </motion.div>
                       );

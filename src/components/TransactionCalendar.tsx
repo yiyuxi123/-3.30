@@ -20,7 +20,7 @@ import TransactionDetailModal from './TransactionDetailModal';
 import { Transaction } from '../types';
 
 export default function TransactionCalendar() {
-  const { transactions, categories, accounts, showReimbursables, privacyMode } = useStore();
+  const { transactions, categories, accounts, showReimbursables } = useStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -142,8 +142,8 @@ export default function TransactionCalendar() {
             {format(selectedDate, 'MM月dd日')} {isToday(selectedDate) && <span className="text-xs font-normal text-emerald-500 ml-1">今天</span>}
           </h3>
           <div className="text-xs text-gray-500 flex space-x-3">
-            <span>支 {privacyMode ? '****' : `¥${selectedDayExpense.toFixed(2)}`}</span>
-            <span>收 {privacyMode ? '****' : `¥${selectedDayIncome.toFixed(2)}`}</span>
+            <span>支 ¥{selectedDayExpense.toFixed(2)}</span>
+            <span>收 ¥{selectedDayIncome.toFixed(2)}</span>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export default function TransactionCalendar() {
                     </div>
                   </div>
                   <div className={`font-bold shrink-0 ml-4 ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
-                    {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}{privacyMode ? '****' : `¥${t.amount.toFixed(2)}`}
+                    {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}¥{t.amount.toFixed(2)}
                   </div>
                 </div>
               );

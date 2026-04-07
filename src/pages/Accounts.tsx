@@ -7,18 +7,16 @@ import AddAccountModal from '../components/AddAccountModal';
 import EditAccountModal from '../components/EditAccountModal';
 import CategoryManagementModal from '../components/CategoryManagementModal';
 import GoalModal from '../components/GoalModal';
-import SettingsModal from '../components/SettingsModal';
 import { Account, SavingGoal } from '../types';
 import { format, parseISO } from 'date-fns';
 
 export default function Accounts() {
-  const { accounts, transactions, categories, privacyMode, togglePrivacyMode } = useStore();
+  const { accounts, transactions, categories } = useStore();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<SavingGoal | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { totalBalance, totalAssets, totalLiabilities } = useMemo(() => {
     let balance = 0;
@@ -143,43 +141,27 @@ export default function Accounts() {
       {/* Header */}
       <header className="pt-4 pb-2 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">资产管理</h1>
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            title="设置"
-          >
-            <Icons.Settings size={20} />
-          </button>
-          <button 
-            onClick={togglePrivacyMode}
-            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-            title={privacyMode ? "显示金额" : "隐藏金额"}
-          >
-            {privacyMode ? <Icons.EyeOff size={20} /> : <Icons.Eye size={20} />}
-          </button>
-          <button 
-            onClick={() => setIsAddOpen(true)}
-            className="p-2 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200 transition-colors"
-          >
-            <Plus size={20} />
-          </button>
-        </div>
+        <button 
+          onClick={() => setIsAddOpen(true)}
+          className="p-2 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200 transition-colors"
+        >
+          <Plus size={20} />
+        </button>
       </header>
 
       {/* Net Worth Card */}
       <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-3xl shadow-lg text-white">
         <p className="text-emerald-100 text-sm font-medium mb-1">净资产 (CNY)</p>
-        <h2 className="text-4xl font-bold mb-6">{privacyMode ? '****' : `¥${totalBalance.toFixed(2)}`}</h2>
+        <h2 className="text-4xl font-bold mb-6">¥{totalBalance.toFixed(2)}</h2>
         
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-emerald-400/30">
           <div>
             <p className="text-emerald-100 text-xs font-medium mb-1">总资产</p>
-            <p className="text-lg font-bold">{privacyMode ? '****' : `¥${totalAssets.toFixed(2)}`}</p>
+            <p className="text-lg font-bold">¥{totalAssets.toFixed(2)}</p>
           </div>
           <div>
             <p className="text-emerald-100 text-xs font-medium mb-1">总负债</p>
-            <p className="text-lg font-bold">{privacyMode ? '****' : `¥${totalLiabilities.toFixed(2)}`}</p>
+            <p className="text-lg font-bold">¥{totalLiabilities.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -217,7 +199,7 @@ export default function Accounts() {
                 </div>
                 <div className="text-right">
                   <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                    {privacyMode ? '****' : `¥${account.balance.toFixed(2)}`}
+                    ¥{account.balance.toFixed(2)}
                   </p>
                 </div>
               </motion.div>
@@ -280,8 +262,8 @@ export default function Accounts() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{privacyMode ? '****' : `¥${goal.currentAmount.toFixed(2)}`}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">/ {privacyMode ? '****' : `¥${goal.targetAmount.toFixed(2)}`}</p>
+                      <p className="font-bold text-gray-900">¥{goal.currentAmount.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">/ ¥{goal.targetAmount.toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -400,7 +382,6 @@ export default function Accounts() {
       {selectedAccount && <EditAccountModal account={selectedAccount} onClose={() => setSelectedAccount(null)} />}
       <GoalModal isOpen={isAddGoalOpen} onClose={() => setIsAddGoalOpen(false)} />
       <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }
