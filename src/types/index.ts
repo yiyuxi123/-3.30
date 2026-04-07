@@ -42,6 +42,7 @@ export interface Transaction {
   reimbursedTxIds?: string[];
   reimbursedByTxId?: string;
   history?: TransactionHistory[];
+  receipt?: string; // Base64 encoded image
 }
 
 export interface TransactionTemplate {

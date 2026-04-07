@@ -7,7 +7,7 @@ import { Transaction } from '../types';
 import { motion } from 'motion/react';
 
 export default function AddTransactionModal({ isOpen, onClose, initialTransaction }: { isOpen: boolean, onClose: () => void, initialTransaction?: Transaction, key?: string | number }) {
-  const { categories, accounts, addTransaction, updateTransaction, transactions } = useStore();
+  const { categories, accounts, addTransaction, updateTransaction, transactions, templates } = useStore();
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -19,6 +19,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
   const [isReimbursable, setIsReimbursable] = useState(false);
   const [selectedReimbursableIds, setSelectedReimbursableIds] = useState<string[]>([]);
   const [fee, setFee] = useState('');
+  const [receipt, setReceipt] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (isOpen) {
@@ -34,6 +35,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setIsReimbursable(initialTransaction.isReimbursable || false);
         setSelectedReimbursableIds(initialTransaction.reimbursedTxIds || []);
         setFee('');
+        setReceipt(initialTransaction.receipt);
       } else {
         // Set defaults
         const defaultExpenseCat = categories.find(c => c.type === 'expense');
@@ -49,6 +51,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         setAmount('');
         setTagsInput('');
         setFee('');
+        setReceipt(undefined);
       }
     }
   }, [isOpen, initialTransaction, type, categories, accounts]);
@@ -71,6 +74,21 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
 
   if (!isOpen) return null;
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        alert('图片大小不能超过 1MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setReceipt(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
@@ -87,7 +105,8 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
       note,
       tags: tags.length > 0 ? tags : undefined,
       isReimbursable: type === 'expense' && selectedCategory?.name === '交通' ? isReimbursable : undefined,
-      reimbursedTxIds: type === 'income' && selectedCategory?.name === '报销款' ? selectedReimbursableIds : undefined
+      reimbursedTxIds: type === 'income' && selectedCategory?.name === '报销款' ? selectedReimbursableIds : undefined,
+      receipt
     };
 
     if (initialTransaction && initialTransaction.id) {
@@ -218,6 +237,29 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
               {amount || '0.00'}
             </div>
           </div>
+
+          {/* Templates */}
+          {!initialTransaction && templates.filter(t => t.type === type).length > 0 && (
+            <div className="flex overflow-x-auto space-x-2 pb-2 scrollbar-hide">
+              {templates.filter(t => t.type === type).map(template => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => {
+                    setAmount(template.amount.toString());
+                    if (template.categoryId) setCategoryId(template.categoryId);
+                    if (template.fromAccountId) setFromAccountId(template.fromAccountId);
+                    if (template.toAccountId) setToAccountId(template.toAccountId);
+                    if (template.note) setNote(template.note);
+                    if (template.tags) setTagsInput(template.tags.join(' '));
+                  }}
+                  className="shrink-0 px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors"
+                >
+                  {template.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Categories Grid */}
           {type !== 'transfer' && (
@@ -426,6 +468,29 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
               </div>
             </div>
           )}
+
+          {/* Receipt Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">附件 (票据/截图)</label>
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center justify-center w-16 h-16 bg-gray-50 border border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                <Icons.Camera size={24} className="text-gray-400" />
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              </label>
+              {receipt && (
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-gray-200">
+                  <img src={receipt} alt="Receipt" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setReceipt(undefined)}
+                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-black/70"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Submit Button */}
           <button 

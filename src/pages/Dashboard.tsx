@@ -10,7 +10,7 @@ import TransactionDetailModal from '../components/TransactionDetailModal';
 import { Transaction } from '../types';
 
 export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
-  const { transactions, accounts, budgets, categories, showReimbursables, toggleShowReimbursables } = useStore();
+  const { transactions, accounts, budgets, categories, showReimbursables, toggleShowReimbursables, privacyMode, togglePrivacyMode } = useStore();
   const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 
@@ -168,6 +168,13 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
         </div>
         <div className="flex items-center space-x-3">
           <button 
+            onClick={togglePrivacyMode}
+            className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            title={privacyMode ? "显示金额" : "隐藏金额"}
+          >
+            {privacyMode ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+          <button 
             onClick={toggleShowReimbursables}
             className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
               showReimbursables 
@@ -194,8 +201,8 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <TrendingDown size={16} className="text-red-500" />
             <span className="text-sm font-medium">本月支出</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">¥{expense.toFixed(2)}</p>
-          <p className="text-xs text-gray-400 mt-1">日均 ¥{dailyAverage.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-900">{privacyMode ? '****' : `¥${expense.toFixed(2)}`}</p>
+          <p className="text-xs text-gray-400 mt-1">日均 {privacyMode ? '****' : `¥${dailyAverage.toFixed(2)}`}</p>
         </motion.div>
         <motion.div 
           whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
@@ -205,7 +212,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <TrendingUp size={16} className="text-emerald-500" />
             <span className="text-sm font-medium">本月收入</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">¥{income.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-gray-900">{privacyMode ? '****' : `¥${income.toFixed(2)}`}</p>
         </motion.div>
       </div>
 
@@ -220,7 +227,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
             <Icons.Receipt size={18} />
             <span className="text-sm font-medium">待报销金额</span>
           </div>
-          <p className="text-lg font-bold text-amber-700">¥{reimbursableAmount.toFixed(2)}</p>
+          <p className="text-lg font-bold text-amber-700">{privacyMode ? '****' : `¥${reimbursableAmount.toFixed(2)}`}</p>
         </motion.div>
       )}
 
@@ -271,9 +278,9 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
         <div className="flex justify-between items-end mb-2">
           <div>
             <p className="text-sm text-gray-500 font-medium mb-1">剩余总预算</p>
-            <p className="text-3xl font-bold text-gray-900">¥{budgetRemaining.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">{privacyMode ? '****' : `¥${budgetRemaining.toFixed(2)}`}</p>
           </div>
-          <p className="text-sm text-gray-400">总预算 ¥{totalBudget}</p>
+          <p className="text-sm text-gray-400">总预算 {privacyMode ? '****' : `¥${totalBudget}`}</p>
         </div>
         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mt-4">
           <motion.div 
@@ -295,7 +302,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                     <span className="text-xs font-medium text-gray-700">{cb.categoryName}</span>
                   </div>
                   <span className="text-xs text-gray-500">
-                    ¥{cb.expense.toFixed(0)} / ¥{cb.amount.toFixed(0)}
+                    {privacyMode ? '**** / ****' : `¥${cb.expense.toFixed(0)} / ¥${cb.amount.toFixed(0)}`}
                   </span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -354,7 +361,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                   <span className="text-gray-600">{item.name}</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="font-medium text-gray-900">¥{item.amount.toFixed(2)}</span>
+                  <span className="font-medium text-gray-900">{privacyMode ? '****' : `¥${item.amount.toFixed(2)}`}</span>
                   <span className="text-gray-400 text-xs w-8 text-right">
                     {((item.amount / expense) * 100).toFixed(0)}%
                   </span>
@@ -380,11 +387,11 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
               <BarChart data={monthlyTrendData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} tickFormatter={(value) => privacyMode ? '****' : value} />
                 <Tooltip 
                   cursor={{ fill: '#f9fafb' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => `¥${value.toFixed(2)}`}
+                  formatter={(value: number) => privacyMode ? '****' : `¥${value.toFixed(2)}`}
                 />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                 <Bar dataKey="支出" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
@@ -449,7 +456,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
                       </div>
                     </div>
                     <div className={`font-bold shrink-0 ml-4 ${t.type === 'expense' ? 'text-gray-900' : t.type === 'income' ? 'text-emerald-500' : 'text-blue-500'}`}>
-                      {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}¥{t.amount.toFixed(2)}
+                      {t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''}{privacyMode ? '****' : `¥${t.amount.toFixed(2)}`}
                     </div>
                   </div>
                 );
