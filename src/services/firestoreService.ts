@@ -10,7 +10,14 @@ export const firestoreService = {
 
     const batch = writeBatch(db);
     const newId = uuidv4();
-    const newTx = { ...transaction, id: newId, userId };
+    const newTx: any = { ...transaction, id: newId, userId };
+    
+    // Remove undefined values
+    Object.keys(newTx).forEach(key => {
+      if (newTx[key] === undefined) {
+        delete newTx[key];
+      }
+    });
     
     batch.set(doc(db, `users/${userId}/transactions`, newId), newTx);
 
@@ -55,7 +62,20 @@ export const firestoreService = {
       : oldTransaction.history;
 
     const newTransaction = { ...oldTransaction, ...updatedFields, history: newHistory };
-    batch.update(doc(db, `users/${userId}/transactions`, id), { ...updatedFields, history: newHistory });
+    
+    const updateData: any = { ...updatedFields };
+    if (newHistory !== undefined) {
+      updateData.history = newHistory;
+    }
+
+    // Remove undefined values as Firestore doesn't support them
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    batch.update(doc(db, `users/${userId}/transactions`, id), updateData);
 
     if (oldTransaction.reimbursedTxIds !== newTransaction.reimbursedTxIds) {
       const oldIds = oldTransaction.reimbursedTxIds || [];
@@ -151,14 +171,22 @@ export const firestoreService = {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error("User not authenticated");
     const id = uuidv4();
-    await setDoc(doc(db, `users/${userId}/${collectionName}`, id), { ...data, id, userId });
+    const cleanData = { ...data, id, userId };
+    Object.keys(cleanData).forEach(key => {
+      if (cleanData[key] === undefined) delete cleanData[key];
+    });
+    await setDoc(doc(db, `users/${userId}/${collectionName}`, id), cleanData);
   },
 
   async updateDocument(collectionName: string, id: string, data: any) {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error("User not authenticated");
     const batch = writeBatch(db);
-    batch.update(doc(db, `users/${userId}/${collectionName}`, id), data);
+    const cleanData = { ...data };
+    Object.keys(cleanData).forEach(key => {
+      if (cleanData[key] === undefined) delete cleanData[key];
+    });
+    batch.update(doc(db, `users/${userId}/${collectionName}`, id), cleanData);
     await batch.commit();
   },
 

@@ -65,8 +65,11 @@ export default function Transactions() {
     return transactions.filter(t => {
       if (!showReimbursables && isReimbursableTx(t)) return false;
       
-      const matchesSearch = t.note.toLowerCase().includes(lowerSearchTerm) || 
-                            categories.find(c => c.id === t.categoryId)?.name.toLowerCase().includes(lowerSearchTerm) ||
+      const noteStr = t.note || '';
+      const catName = categories.find(c => c.id === t.categoryId)?.name || '';
+      
+      const matchesSearch = noteStr.toLowerCase().includes(lowerSearchTerm) || 
+                            catName.toLowerCase().includes(lowerSearchTerm) ||
                             (t.tags && t.tags.some(tag => tag.toLowerCase().includes(lowerSearchTerm))) ||
                             t.amount.toString().includes(lowerSearchTerm);
       const matchesType = filterType === 'all' || t.type === filterType;
