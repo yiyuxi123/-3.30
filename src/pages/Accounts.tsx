@@ -94,22 +94,24 @@ export default function Accounts() {
     document.body.removeChild(link);
   };
 
-  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.accounts && data.transactions && data.categories) {
           if (window.confirm('恢复数据将覆盖当前所有数据，确定要继续吗？')) {
-            useStore.setState({
-              accounts: data.accounts,
-              transactions: data.transactions,
-              categories: data.categories
-            });
-            alert('数据恢复成功！');
+            try {
+              const { firestoreService } = await import('../services/firestoreService');
+              await firestoreService.restoreData(data);
+              alert('数据恢复成功！');
+            } catch (err) {
+              console.error('Restore failed:', err);
+              alert('数据恢复失败，请检查网络或权限。');
+            }
           }
         } else {
           alert('无效的备份文件格式。');
@@ -123,15 +125,17 @@ export default function Accounts() {
     e.target.value = '';
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (window.confirm('警告：此操作将清空所有账户、账单和分类数据，且不可恢复！确定要继续吗？')) {
       if (window.confirm('再次确认：您真的要清空所有数据吗？')) {
-        useStore.setState({
-          accounts: [],
-          transactions: [],
-          categories: []
-        });
-        alert('所有数据已清空。');
+        try {
+          const { firestoreService } = await import('../services/firestoreService');
+          await firestoreService.clearAllData();
+          alert('所有数据已清空。');
+        } catch (err) {
+          console.error('Clear failed:', err);
+          alert('清空数据失败，请检查网络或权限。');
+        }
       }
     }
   };

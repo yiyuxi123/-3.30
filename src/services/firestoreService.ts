@@ -166,5 +166,73 @@ export const firestoreService = {
     const userId = auth.currentUser?.uid;
     if (!userId) throw new Error("User not authenticated");
     await deleteDoc(doc(db, `users/${userId}/${collectionName}`, id));
+  },
+
+  async clearAllData() {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error("User not authenticated");
+
+    const collections = ['accounts', 'categories', 'transactions', 'budgets', 'templates', 'goals'];
+    
+    for (const coll of collections) {
+      const snapshot = await getDocs(collection(db, `users/${userId}/${coll}`));
+      const batches = [];
+      let currentBatch = writeBatch(db);
+      let count = 0;
+
+      snapshot.docs.forEach((document) => {
+        currentBatch.delete(document.ref);
+        count++;
+        if (count === 400) {
+          batches.push(currentBatch);
+          currentBatch = writeBatch(db);
+          count = 0;
+        }
+      });
+      
+      if (count > 0) {
+        batches.push(currentBatch);
+      }
+
+      for (const batch of batches) {
+        await batch.commit();
+      }
+    }
+  },
+
+  async restoreData(data: any) {
+    const userId = auth.currentUser?.uid;
+    if (!userId) throw new Error("User not authenticated");
+
+    await this.clearAllData();
+
+    const collections = ['accounts', 'categories', 'transactions', 'budgets', 'templates', 'goals'];
+    
+    for (const coll of collections) {
+      if (data[coll] && Array.isArray(data[coll])) {
+        const batches = [];
+        let currentBatch = writeBatch(db);
+        let count = 0;
+
+        data[coll].forEach((item: any) => {
+          const id = item.id || uuidv4();
+          currentBatch.set(doc(db, `users/${userId}/${coll}`, id), { ...item, id, userId });
+          count++;
+          if (count === 400) {
+            batches.push(currentBatch);
+            currentBatch = writeBatch(db);
+            count = 0;
+          }
+        });
+
+        if (count > 0) {
+          batches.push(currentBatch);
+        }
+
+        for (const batch of batches) {
+          await batch.commit();
+        }
+      }
+    }
   }
 };
