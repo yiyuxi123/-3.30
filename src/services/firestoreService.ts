@@ -225,6 +225,16 @@ export const firestoreService = {
             }
           });
 
+          // Prevent 1MB document size limit errors by stripping bulky history data during restore
+          if (coll === 'transactions' && cleanItem.history) {
+            delete cleanItem.history;
+          }
+
+          // Truncate excessively long notes
+          if (coll === 'transactions' && cleanItem.note && typeof cleanItem.note === 'string' && cleanItem.note.length > 500) {
+            cleanItem.note = cleanItem.note.substring(0, 500);
+          }
+
           currentBatch.set(doc(db, `users/${userId}/${coll}`, id), cleanItem);
           count++;
           if (count === 400) {
