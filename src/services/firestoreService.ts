@@ -216,7 +216,16 @@ export const firestoreService = {
 
         data[coll].forEach((item: any) => {
           const id = item.id || uuidv4();
-          currentBatch.set(doc(db, `users/${userId}/${coll}`, id), { ...item, id, userId });
+          
+          // Sanitize data: remove null, undefined, and empty strings for optional fields
+          const cleanItem: any = { id, userId };
+          Object.entries(item).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== "") {
+              cleanItem[k] = v;
+            }
+          });
+
+          currentBatch.set(doc(db, `users/${userId}/${coll}`, id), cleanItem);
           count++;
           if (count === 400) {
             batches.push(currentBatch);

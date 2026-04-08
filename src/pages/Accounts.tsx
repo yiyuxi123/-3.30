@@ -108,9 +108,9 @@ export default function Accounts() {
               const { firestoreService } = await import('../services/firestoreService');
               await firestoreService.restoreData(data);
               alert('数据恢复成功！');
-            } catch (err) {
+            } catch (err: any) {
               console.error('Restore failed:', err);
-              alert('数据恢复失败，请检查网络或权限。');
+              alert(`数据恢复失败: ${err.message}`);
             }
           }
         } else {
@@ -132,9 +132,9 @@ export default function Accounts() {
           const { firestoreService } = await import('../services/firestoreService');
           await firestoreService.clearAllData();
           alert('所有数据已清空。');
-        } catch (err) {
+        } catch (err: any) {
           console.error('Clear failed:', err);
-          alert('清空数据失败，请检查网络或权限。');
+          alert(`清空数据失败: ${err.message}`);
         }
       }
     }
