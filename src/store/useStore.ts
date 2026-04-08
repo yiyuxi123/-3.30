@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { Account, Budget, Category, Transaction, TransactionTemplate, SavingGoal } from '../types';
-import { v4 as uuidv4 } from 'uuid';
+import { firestoreService } from '../services/firestoreService';
 
 interface AppState {
   accounts: Account[];
@@ -38,14 +37,13 @@ interface AppState {
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
 
-  privacyMode: boolean;
-  togglePrivacyMode: () => void;
-
-  passcode: string | null;
-  setPasscode: (code: string | null) => void;
-  isLocked: boolean;
-  unlock: () => void;
-  lock: () => void;
+  // Firebase Sync Setters
+  setAccounts: (accounts: Account[]) => void;
+  setCategories: (categories: Category[]) => void;
+  setTransactions: (transactions: Transaction[]) => void;
+  setBudgets: (budgets: Budget[]) => void;
+  setTemplates: (templates: TransactionTemplate[]) => void;
+  setGoals: (goals: SavingGoal[]) => void;
 }
 
 const initialCategories: Category[] = [
@@ -66,212 +64,61 @@ const initialAccounts: Account[] = [
 ];
 
 export const useStore = create<AppState>()(
-  persist(
-    (set) => ({
-      accounts: initialAccounts,
-      categories: initialCategories,
-      transactions: [],
-      budgets: [
-        { id: '1', amount: 5000, period: 'monthly' } // Default total monthly budget
-      ],
-      templates: [],
-      goals: [],
-      showReimbursables: true,
-      privacyMode: false,
-      passcode: null,
-      isLocked: false,
+  (set, get) => ({
+    accounts: [],
+    categories: [],
+    transactions: [],
+    budgets: [],
+    templates: [],
+    goals: [],
+    showReimbursables: true,
 
-      toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
-      togglePrivacyMode: () => set((state) => ({ privacyMode: !state.privacyMode })),
-      setPasscode: (code) => set({ passcode: code, isLocked: !!code }),
-      unlock: () => set({ isLocked: false }),
-      lock: () => set((state) => ({ isLocked: !!state.passcode })),
+    setAccounts: (accounts) => set({ accounts }),
+    setCategories: (categories) => set({ categories }),
+    setTransactions: (transactions) => set({ transactions }),
+    setBudgets: (budgets) => set({ budgets }),
+    setTemplates: (templates) => set({ templates }),
+    setGoals: (goals) => set({ goals }),
 
-      markPreviousAsReimbursed: () => set((state) => ({
-        transactions: state.transactions.map(t => 
-          t.isReimbursable && !t.isReimbursed ? { ...t, isReimbursed: true } : t
-        )
-      })),
+    toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
 
-      addTransaction: (transaction) =>
-        set((state) => {
-          const newTransaction = { ...transaction, id: uuidv4() };
-          
-          let updatedTransactions = [newTransaction, ...state.transactions];
+    markPreviousAsReimbursed: async () => {
+      await firestoreService.markPreviousAsReimbursed(get().transactions);
+    },
 
-          if (newTransaction.reimbursedTxIds && newTransaction.reimbursedTxIds.length > 0) {
-            updatedTransactions = updatedTransactions.map(t => {
-              if (newTransaction.reimbursedTxIds!.includes(t.id)) {
-                return { ...t, isReimbursed: true, reimbursedByTxId: newTransaction.id };
-              }
-              return t;
-            });
-          }
+    addTransaction: async (transaction) => {
+      await firestoreService.addTransaction(transaction, get().accounts, get().transactions);
+    },
 
-          // Update account balances
-          const updatedAccounts = state.accounts.map((acc) => {
-            if (transaction.type === 'expense' && acc.id === transaction.fromAccountId) {
-              return { ...acc, balance: acc.balance - transaction.amount };
-            }
-            if (transaction.type === 'income' && acc.id === transaction.toAccountId) {
-              return { ...acc, balance: acc.balance + transaction.amount };
-            }
-            if (transaction.type === 'transfer') {
-              if (acc.id === transaction.fromAccountId) {
-                return { ...acc, balance: acc.balance - transaction.amount };
-              }
-              if (acc.id === transaction.toAccountId) {
-                return { ...acc, balance: acc.balance + transaction.amount };
-              }
-            }
-            return acc;
-          });
+    updateTransaction: async (id, updatedFields) => {
+      const oldTransaction = get().transactions.find((t) => t.id === id);
+      if (!oldTransaction) return;
+      await firestoreService.updateTransaction(id, updatedFields, oldTransaction, get().accounts, get().transactions);
+    },
 
-          return {
-            transactions: updatedTransactions,
-            accounts: updatedAccounts,
-          };
-        }),
+    deleteTransaction: async (id) => {
+      const transaction = get().transactions.find((t) => t.id === id);
+      if (!transaction) return;
+      await firestoreService.deleteTransaction(id, transaction, get().accounts, get().transactions);
+    },
 
-      updateTransaction: (id, updatedFields) =>
-        set((state) => {
-          const oldTransaction = state.transactions.find((t) => t.id === id);
-          if (!oldTransaction) return state;
+    addAccount: async (account) => await firestoreService.addDocument('accounts', account),
+    updateAccount: async (id, account) => await firestoreService.updateDocument('accounts', id, account),
+    deleteAccount: async (id) => await firestoreService.deleteDocument('accounts', id),
 
-          const changes: { field: string; oldValue: any; newValue: any }[] = [];
-          (Object.keys(updatedFields) as (keyof Transaction)[]).forEach((key) => {
-            if (updatedFields[key] !== oldTransaction[key] && key !== 'history') {
-              changes.push({
-                field: key,
-                oldValue: oldTransaction[key],
-                newValue: updatedFields[key],
-              });
-            }
-          });
+    addCategory: async (category) => await firestoreService.addDocument('categories', category),
+    updateCategory: async (id, category) => await firestoreService.updateDocument('categories', id, category),
+    deleteCategory: async (id) => await firestoreService.deleteDocument('categories', id),
 
-          const newHistory = changes.length > 0
-            ? [
-                ...(oldTransaction.history || []),
-                { date: new Date().toISOString(), changes },
-              ]
-            : oldTransaction.history;
+    addBudget: async (budget) => await firestoreService.addDocument('budgets', budget),
+    updateBudget: async (id, budget) => await firestoreService.updateDocument('budgets', id, budget),
+    deleteBudget: async (id) => await firestoreService.deleteDocument('budgets', id),
 
-          const newTransaction = { ...oldTransaction, ...updatedFields, history: newHistory };
+    addTemplate: async (template) => await firestoreService.addDocument('templates', template),
+    deleteTemplate: async (id) => await firestoreService.deleteDocument('templates', id),
 
-          let updatedTransactions = state.transactions.map((t) => (t.id === id ? newTransaction : t));
-
-          if (oldTransaction.reimbursedTxIds !== newTransaction.reimbursedTxIds) {
-            const oldIds = oldTransaction.reimbursedTxIds || [];
-            const newIds = newTransaction.reimbursedTxIds || [];
-            
-            const removedIds = oldIds.filter(tid => !newIds.includes(tid));
-            const addedIds = newIds.filter(tid => !oldIds.includes(tid));
-
-            updatedTransactions = updatedTransactions.map(t => {
-              if (removedIds.includes(t.id)) {
-                return { ...t, isReimbursed: false, reimbursedByTxId: undefined };
-              }
-              if (addedIds.includes(t.id)) {
-                return { ...t, isReimbursed: true, reimbursedByTxId: newTransaction.id };
-              }
-              return t;
-            });
-          }
-
-          // Revert old transaction effect on accounts
-          let updatedAccounts = state.accounts.map((acc) => {
-            let balance = acc.balance;
-            if (oldTransaction.type === 'expense' && acc.id === oldTransaction.fromAccountId) balance += oldTransaction.amount;
-            if (oldTransaction.type === 'income' && acc.id === oldTransaction.toAccountId) balance -= oldTransaction.amount;
-            if (oldTransaction.type === 'transfer') {
-              if (acc.id === oldTransaction.fromAccountId) balance += oldTransaction.amount;
-              if (acc.id === oldTransaction.toAccountId) balance -= oldTransaction.amount;
-            }
-            return { ...acc, balance };
-          });
-
-          // Apply new transaction effect on accounts
-          updatedAccounts = updatedAccounts.map((acc) => {
-            let balance = acc.balance;
-            if (newTransaction.type === 'expense' && acc.id === newTransaction.fromAccountId) balance -= newTransaction.amount;
-            if (newTransaction.type === 'income' && acc.id === newTransaction.toAccountId) balance += newTransaction.amount;
-            if (newTransaction.type === 'transfer') {
-              if (acc.id === newTransaction.fromAccountId) balance -= newTransaction.amount;
-              if (acc.id === newTransaction.toAccountId) balance += newTransaction.amount;
-            }
-            return { ...acc, balance };
-          });
-
-          return {
-            transactions: updatedTransactions,
-            accounts: updatedAccounts,
-          };
-        }),
-
-      deleteTransaction: (id) =>
-        set((state) => {
-          const transaction = state.transactions.find((t) => t.id === id);
-          if (!transaction) return state;
-
-          let updatedTransactions = state.transactions.filter((t) => t.id !== id);
-
-          if (transaction.reimbursedTxIds && transaction.reimbursedTxIds.length > 0) {
-            updatedTransactions = updatedTransactions.map(t => {
-              if (transaction.reimbursedTxIds!.includes(t.id)) {
-                return { ...t, isReimbursed: false, reimbursedByTxId: undefined };
-              }
-              return t;
-            });
-          }
-
-          if (transaction.reimbursedByTxId) {
-             updatedTransactions = updatedTransactions.map(t => {
-               if (t.id === transaction.reimbursedByTxId) {
-                 return { ...t, reimbursedTxIds: t.reimbursedTxIds?.filter(tid => tid !== id) };
-               }
-               return t;
-             });
-          }
-
-          // Revert transaction effect on accounts
-          const updatedAccounts = state.accounts.map((acc) => {
-            let balance = acc.balance;
-            if (transaction.type === 'expense' && acc.id === transaction.fromAccountId) balance += transaction.amount;
-            if (transaction.type === 'income' && acc.id === transaction.toAccountId) balance -= transaction.amount;
-            if (transaction.type === 'transfer') {
-              if (acc.id === transaction.fromAccountId) balance += transaction.amount;
-              if (acc.id === transaction.toAccountId) balance -= transaction.amount;
-            }
-            return { ...acc, balance };
-          });
-
-          return {
-            transactions: updatedTransactions,
-            accounts: updatedAccounts,
-          };
-        }),
-
-      addAccount: (account) => set((state) => ({ accounts: [...state.accounts, { ...account, id: uuidv4() }] })),
-      updateAccount: (id, account) => set((state) => ({ accounts: state.accounts.map((a) => (a.id === id ? { ...a, ...account } : a)) })),
-      deleteAccount: (id) => set((state) => ({ accounts: state.accounts.filter((a) => a.id !== id) })),
-
-      addCategory: (category) => set((state) => ({ categories: [...state.categories, { ...category, id: uuidv4() }] })),
-      updateCategory: (id, category) => set((state) => ({ categories: state.categories.map((c) => (c.id === id ? { ...c, ...category } : c)) })),
-      deleteCategory: (id) => set((state) => ({ categories: state.categories.filter((c) => c.id !== id) })),
-
-      addBudget: (budget) => set((state) => ({ budgets: [...state.budgets, { ...budget, id: uuidv4() }] })),
-      updateBudget: (id, budget) => set((state) => ({ budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...budget } : b)) })),
-      deleteBudget: (id) => set((state) => ({ budgets: state.budgets.filter((b) => b.id !== id) })),
-
-      addTemplate: (template) => set((state) => ({ templates: [...(state.templates || []), { ...template, id: uuidv4() }] })),
-      deleteTemplate: (id) => set((state) => ({ templates: (state.templates || []).filter((t) => t.id !== id) })),
-
-      addGoal: (goal) => set((state) => ({ goals: [...(state.goals || []), { ...goal, id: uuidv4() }] })),
-      updateGoal: (id, goal) => set((state) => ({ goals: (state.goals || []).map((g) => (g.id === id ? { ...g, ...goal } : g)) })),
-      deleteGoal: (id) => set((state) => ({ goals: (state.goals || []).filter((g) => g.id !== id) })),
-    }),
-    {
-      name: 'bookkeeping-storage',
-    }
-  )
+    addGoal: async (goal) => await firestoreService.addDocument('goals', goal),
+    updateGoal: async (id, goal) => await firestoreService.updateDocument('goals', id, goal),
+    deleteGoal: async (id) => await firestoreService.deleteDocument('goals', id),
+  })
 );

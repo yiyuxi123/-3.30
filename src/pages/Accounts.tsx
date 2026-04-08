@@ -376,6 +376,17 @@ export default function Accounts() {
             <Icons.Trash2 size={24} className="text-red-500" />
             <span className="text-sm font-medium">清空数据</span>
           </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              import('../firebase').then(({ logout }) => logout());
+            }}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700 hover:bg-gray-50"
+          >
+            <Icons.LogOut size={24} className="text-gray-500" />
+            <span className="text-sm font-medium">退出登录</span>
+          </motion.button>
         </div>
       </div>
 

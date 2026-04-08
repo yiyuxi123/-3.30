@@ -1,0 +1,238 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users/{userId}/accounts
+    // Fields:
+    //   - name: string (required)
+    //   - type: string (required, enum)
+    //   - balance: number (required)
+    //   - color: string (required)
+    //   - icon: string (required)
+    //   - userId: string (required)
+    //
+    // Collection: users/{userId}/categories
+    // Fields:
+    //   - name: string (required)
+    //   - type: string (required, enum)
+    //   - icon: string (required)
+    //   - color: string (required)
+    //   - isFixed: boolean (optional)
+    //   - userId: string (required)
+    //
+    // Collection: users/{userId}/transactions
+    // Fields:
+    //   - type: string (required, enum)
+    //   - amount: number (required)
+    //   - date: string (required)
+    //   - categoryId: string (optional)
+    //   - fromAccountId: string (optional)
+    //   - toAccountId: string (optional)
+    //   - note: string (optional)
+    //   - tags: list (optional)
+    //   - isReimbursable: boolean (optional)
+    //   - isReimbursed: boolean (optional)
+    //   - reimbursedTxIds: list (optional)
+    //   - reimbursedByTxId: string (optional)
+    //   - history: list (optional)
+    //   - userId: string (required)
+    //
+    // Collection: users/{userId}/budgets
+    // Fields:
+    //   - amount: number (required)
+    //   - period: string (required, enum)
+    //   - categoryId: string (optional)
+    //   - userId: string (required)
+    //
+    // Collection: users/{userId}/templates
+    // Fields:
+    //   - name: string (required)
+    //   - type: string (required, enum)
+    //   - amount: number (optional)
+    //   - categoryId: string (optional)
+    //   - fromAccountId: string (optional)
+    //   - toAccountId: string (optional)
+    //   - note: string (optional)
+    //   - tags: list (optional)
+    //   - userId: string (required)
+    //
+    // Collection: users/{userId}/goals
+    // Fields:
+    //   - name: string (required)
+    //   - targetAmount: number (required)
+    //   - currentAmount: number (required)
+    //   - accountId: string (optional)
+    //   - deadline: string (optional)
+    //   - icon: string (required)
+    //   - color: string (required)
+    //   - userId: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function uidUnchanged() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidAccount(data) {
+      return hasRequiredFields(['name', 'type', 'balance', 'color', 'icon', 'userId']) &&
+             validStringLength('name', 1, 50) &&
+             data.type in ['bank', 'cash', 'alipay', 'wechat', 'credit'] &&
+             data.balance is number &&
+             validStringLength('color', 1, 20) &&
+             validStringLength('icon', 1, 50) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidCategory(data) {
+      return hasRequiredFields(['name', 'type', 'icon', 'color', 'userId']) &&
+             validStringLength('name', 1, 50) &&
+             data.type in ['expense', 'income', 'transfer'] &&
+             validStringLength('icon', 1, 50) &&
+             validStringLength('color', 1, 20) &&
+             (!( 'isFixed' in data ) || data.isFixed is bool) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidTransaction(data) {
+      return hasRequiredFields(['type', 'amount', 'date', 'userId']) &&
+             data.type in ['expense', 'income', 'transfer'] &&
+             data.amount is number &&
+             validStringLength('date', 1, 50) &&
+             isValidOptionalString('categoryId', 1, 100) &&
+             isValidOptionalString('fromAccountId', 1, 100) &&
+             isValidOptionalString('toAccountId', 1, 100) &&
+             isValidOptionalString('note', 0, 500) &&
+             (!( 'tags' in data ) || (data.tags is list && data.tags.size() <= 20)) &&
+             (!( 'isReimbursable' in data ) || data.isReimbursable is bool) &&
+             (!( 'isReimbursed' in data ) || data.isReimbursed is bool) &&
+             (!( 'reimbursedTxIds' in data ) || (data.reimbursedTxIds is list && data.reimbursedTxIds.size() <= 100)) &&
+             isValidOptionalString('reimbursedByTxId', 1, 100) &&
+             (!( 'history' in data ) || (data.history is list && data.history.size() <= 100)) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidBudget(data) {
+      return hasRequiredFields(['amount', 'period', 'userId']) &&
+             data.amount is number &&
+             data.period in ['monthly', 'yearly'] &&
+             isValidOptionalString('categoryId', 1, 100) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidTemplate(data) {
+      return hasRequiredFields(['name', 'type', 'userId']) &&
+             validStringLength('name', 1, 50) &&
+             data.type in ['expense', 'income', 'transfer'] &&
+             (!( 'amount' in data ) || data.amount is number) &&
+             isValidOptionalString('categoryId', 1, 100) &&
+             isValidOptionalString('fromAccountId', 1, 100) &&
+             isValidOptionalString('toAccountId', 1, 100) &&
+             isValidOptionalString('note', 0, 500) &&
+             (!( 'tags' in data ) || (data.tags is list && data.tags.size() <= 20)) &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidGoal(data) {
+      return hasRequiredFields(['name', 'targetAmount', 'currentAmount', 'icon', 'color', 'userId']) &&
+             validStringLength('name', 1, 50) &&
+             data.targetAmount is number &&
+             data.currentAmount is number &&
+             isValidOptionalString('accountId', 1, 100) &&
+             isValidOptionalString('deadline', 1, 50) &&
+             validStringLength('icon', 1, 50) &&
+             validStringLength('color', 1, 20) &&
+             data.userId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if false; // Users document itself is not used directly yet, but protected
+
+      match /accounts/{accountId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidAccount(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidAccount(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+
+      match /categories/{categoryId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidCategory(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidCategory(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidTransaction(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+
+      match /budgets/{budgetId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidBudget(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidBudget(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+
+      match /templates/{templateId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTemplate(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidTemplate(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+
+      match /goals/{goalId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidGoal(request.resource.data) && uidUnchanged();
+        allow update: if isOwner(userId) && isValidGoal(request.resource.data) && uidNotModified();
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

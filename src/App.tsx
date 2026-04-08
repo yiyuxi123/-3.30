@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Home, List, PieChart, User, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Dashboard from './pages/Dashboard';
@@ -6,26 +6,11 @@ import Transactions from './pages/Transactions';
 import Statistics from './pages/Statistics';
 import Accounts from './pages/Accounts';
 import AddTransactionModal from './components/AddTransactionModal';
-import LockScreen from './components/LockScreen';
-import { useStore } from './store/useStore';
+import { FirebaseProvider } from './components/FirebaseProvider';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const { lock, isLocked } = useStore();
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        lock();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [lock]);
 
   const pageVariants = {
     initial: { opacity: 0, y: 10, scale: 0.98 },
@@ -40,9 +25,10 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto relative">
+    <FirebaseProvider>
+      <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -112,9 +98,8 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-
-      <LockScreen />
-    </div>
+      </div>
+    </FirebaseProvider>
   );
 }
 

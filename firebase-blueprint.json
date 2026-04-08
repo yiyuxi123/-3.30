@@ -1,0 +1,125 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "A financial account (e.g., bank, cash, alipay).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["bank", "cash", "alipay", "wechat", "credit"] },
+        "balance": { "type": "number" },
+        "color": { "type": "string" },
+        "icon": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "balance", "color", "icon", "userId"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "A transaction category.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "isFixed": { "type": "boolean" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "icon", "color", "userId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A financial transaction.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "categoryId": { "type": "string" },
+        "fromAccountId": { "type": "string" },
+        "toAccountId": { "type": "string" },
+        "note": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "isReimbursable": { "type": "boolean" },
+        "isReimbursed": { "type": "boolean" },
+        "reimbursedTxIds": { "type": "array", "items": { "type": "string" } },
+        "reimbursedByTxId": { "type": "string" },
+        "history": { "type": "array" },
+        "userId": { "type": "string" }
+      },
+      "required": ["type", "amount", "date", "userId"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "A monthly budget.",
+      "type": "object",
+      "properties": {
+        "amount": { "type": "number" },
+        "period": { "type": "string", "enum": ["monthly", "yearly"] },
+        "categoryId": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["amount", "period", "userId"]
+    },
+    "TransactionTemplate": {
+      "title": "TransactionTemplate",
+      "description": "A template for quick transactions.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["expense", "income", "transfer"] },
+        "amount": { "type": "number" },
+        "categoryId": { "type": "string" },
+        "fromAccountId": { "type": "string" },
+        "toAccountId": { "type": "string" },
+        "note": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "type", "userId"]
+    },
+    "SavingGoal": {
+      "title": "SavingGoal",
+      "description": "A saving goal.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "targetAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "accountId": { "type": "string" },
+        "deadline": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "userId": { "type": "string" }
+      },
+      "required": ["name", "targetAmount", "currentAmount", "icon", "color", "userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/accounts/{accountId}": {
+      "schema": { "$ref": "#/entities/Account" },
+      "description": "User accounts"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "User categories"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "User transactions"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": { "$ref": "#/entities/Budget" },
+      "description": "User budgets"
+    },
+    "/users/{userId}/templates/{templateId}": {
+      "schema": { "$ref": "#/entities/TransactionTemplate" },
+      "description": "User transaction templates"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/SavingGoal" },
+      "description": "User saving goals"
+    }
+  }
+}
