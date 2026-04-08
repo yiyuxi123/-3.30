@@ -231,7 +231,9 @@ export default function Accounts() {
           <div className="grid grid-cols-1 gap-3">
             {useStore(state => state.goals || []).map((goal, index) => {
               const IconComponent = (Icons as any)[goal.icon] || Icons.Target;
-              const percent = Math.min(100, Math.max(0, (goal.currentAmount / goal.targetAmount) * 100));
+              const linkedAccount = goal.accountId ? accounts.find(a => a.id === goal.accountId) : null;
+              const currentAmount = linkedAccount ? linkedAccount.balance : goal.currentAmount;
+              const percent = Math.min(100, Math.max(0, (currentAmount / goal.targetAmount) * 100));
               
               return (
                 <motion.div 
@@ -262,7 +264,7 @@ export default function Accounts() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">¥{goal.currentAmount.toFixed(2)}</p>
+                      <p className="font-bold text-gray-900">¥{currentAmount.toFixed(2)}</p>
                       <p className="text-xs text-gray-500 mt-0.5">/ ¥{goal.targetAmount.toFixed(2)}</p>
                     </div>
                   </div>

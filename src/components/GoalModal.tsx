@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { SavingGoal } from '../types';
 import * as Icons from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import Numpad from './Numpad';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 const AVAILABLE_ICONS = ['Target', 'Car', 'Home', 'Plane', 'Laptop', 'Gift', 'Heart', 'GraduationCap'];
@@ -14,14 +15,16 @@ interface Props {
 }
 
 export default function GoalModal({ isOpen, onClose, goal }: Props) {
-  const { addGoal, updateGoal, deleteGoal } = useStore();
+  const { addGoal, updateGoal, deleteGoal, accounts } = useStore();
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [currentAmount, setCurrentAmount] = useState('');
   const [deadline, setDeadline] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState(AVAILABLE_ICONS[0]);
+  const [accountId, setAccountId] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
+  const [activeInput, setActiveInput] = useState<'target' | 'current' | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -32,6 +35,7 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
         setDeadline(goal.deadline ? goal.deadline.split('T')[0] : '');
         setColor(goal.color);
         setIcon(goal.icon);
+        setAccountId(goal.accountId || '');
       } else {
         setName('');
         setTargetAmount('');
@@ -39,8 +43,10 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
         setDeadline('');
         setColor(COLORS[0]);
         setIcon(AVAILABLE_ICONS[0]);
+        setAccountId('');
       }
       setShowConfirm(false);
+      setActiveInput(null);
     }
   }, [isOpen, goal]);
 
@@ -56,7 +62,8 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
       currentAmount: Number(currentAmount) || 0,
       deadline: deadline ? new Date(deadline).toISOString() : undefined,
       color,
-      icon
+      icon,
+      accountId: accountId || undefined
     };
 
     if (goal) {
@@ -72,6 +79,41 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
       deleteGoal(goal.id);
       onClose();
     }
+  };
+
+  const handleNumberClick = (num: string) => {
+    if (!activeInput) return;
+    const currentVal = activeInput === 'target' ? targetAmount : currentAmount;
+    
+    if (num === '.' && currentVal.includes('.')) return;
+    if (currentVal === '0' && num !== '.') {
+      if (activeInput === 'target') setTargetAmount(num === '00' ? '0' : num);
+      else setCurrentAmount(num === '00' ? '0' : num);
+    } else {
+      if (currentVal.includes('.')) {
+        const [, decimal] = currentVal.split('.');
+        if (decimal && decimal.length >= 2) return;
+        if (num === '00' && decimal && decimal.length === 1) {
+          if (activeInput === 'target') setTargetAmount(prev => prev + '0');
+          else setCurrentAmount(prev => prev + '0');
+          return;
+        }
+      }
+      if (activeInput === 'target') setTargetAmount(prev => prev + num);
+      else setCurrentAmount(prev => prev + num);
+    }
+  };
+
+  const handleNumpadDelete = () => {
+    if (!activeInput) return;
+    if (activeInput === 'target') setTargetAmount(prev => prev.slice(0, -1));
+    else setCurrentAmount(prev => prev.slice(0, -1));
+  };
+
+  const handleClear = () => {
+    if (!activeInput) return;
+    if (activeInput === 'target') setTargetAmount('');
+    else setCurrentAmount('');
   };
 
   return (
@@ -125,29 +167,36 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">目标金额</label>
-                    <input 
-                      type="number" 
-                      required
-                      min="0"
-                      step="0.01"
-                      value={targetAmount}
-                      onChange={e => setTargetAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                    />
+                    <div 
+                      className={`w-full p-3 bg-gray-50 border rounded-xl outline-none transition-all cursor-pointer ${activeInput === 'target' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-gray-200'}`}
+                      onClick={() => setActiveInput('target')}
+                    >
+                      {targetAmount || '0.00'}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">已存金额</label>
-                    <input 
-                      type="number" 
-                      min="0"
-                      step="0.01"
-                      value={currentAmount}
-                      onChange={e => setCurrentAmount(e.target.value)}
-                      placeholder="0.00"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                    />
+                    <div 
+                      className={`w-full p-3 bg-gray-50 border rounded-xl outline-none transition-all ${accountId ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} ${activeInput === 'current' ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-gray-200'}`}
+                      onClick={() => !accountId && setActiveInput('current')}
+                    >
+                      {accountId ? (accounts.find(a => a.id === accountId)?.balance || 0).toFixed(2) : (currentAmount || '0.00')}
+                    </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">关联账户 (选填)</label>
+                  <select 
+                    value={accountId} 
+                    onChange={e => setAccountId(e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  >
+                    <option value="">不关联账户</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>{acc.name} (余额: ¥{acc.balance})</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -181,7 +230,7 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">颜色</label>
-                  <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="flex space-x-3 overflow-x-auto p-2 -mx-2 scrollbar-hide">
                     {COLORS.map(c => (
                       <button
                         key={c}
@@ -199,7 +248,7 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
             )}
           </div>
 
-          {!showConfirm && (
+          {!showConfirm && !activeInput && (
             <div className="p-4 border-t border-gray-100 bg-gray-50 flex space-x-3">
               {goal && (
                 <button 
@@ -218,6 +267,15 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
                 保存
               </button>
             </div>
+          )}
+
+          {activeInput && (
+            <Numpad
+              onNumberClick={handleNumberClick}
+              onDelete={handleNumpadDelete}
+              onClear={handleClear}
+              onComplete={() => setActiveInput(null)}
+            />
           )}
         </motion.div>
       </div>

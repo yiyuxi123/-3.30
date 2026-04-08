@@ -126,24 +126,6 @@ export default function Transactions() {
           <h1 className="text-2xl font-bold text-gray-900">账单明细</h1>
           <div className="flex items-center space-x-3">
             <button 
-              onClick={toggleShowReimbursables}
-              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                showReimbursables 
-                  ? 'bg-emerald-100 text-emerald-700' 
-                  : 'bg-gray-100 text-gray-500'
-              }`}
-            >
-              {showReimbursables ? <Eye size={14} /> : <EyeOff size={14} />}
-              <span>{showReimbursables ? '含报销' : '不含报销'}</span>
-            </button>
-            <button 
-              onClick={handleExportFiltered}
-              className="p-1.5 rounded-lg transition-colors bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200"
-              title="导出当前筛选结果"
-            >
-              <Icons.Download size={18} />
-            </button>
-            <button 
               onClick={() => {
                 setIsSelectionMode(!isSelectionMode);
                 if (isSelectionMode) setSelectedIds(new Set());
@@ -218,21 +200,43 @@ export default function Transactions() {
           </div>
         </div>
 
-        {/* Type Tabs */}
-        <div className="flex space-x-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-          {(['all', 'expense', 'income', 'transfer'] as const).map(type => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                filterType === type 
-                  ? 'bg-gray-900 text-white shadow-sm' 
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+        {/* Type Tabs & Actions */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-2">
+          <div className="flex space-x-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide flex-1">
+            {(['all', 'expense', 'income', 'transfer'] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => setFilterType(type)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  filterType === type 
+                    ? 'bg-gray-900 text-white shadow-sm' 
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {type === 'all' ? '全部' : type === 'expense' ? '支出' : type === 'income' ? '收入' : '转账'}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center space-x-2 shrink-0">
+            <button 
+              onClick={toggleShowReimbursables}
+              className={`flex items-center space-x-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                showReimbursables 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : 'bg-gray-100 text-gray-500'
               }`}
             >
-              {type === 'all' ? '全部' : type === 'expense' ? '支出' : type === 'income' ? '收入' : '转账'}
+              {showReimbursables ? <Eye size={14} /> : <EyeOff size={14} />}
+              <span>{showReimbursables ? '含报销' : '不含报销'}</span>
             </button>
-          ))}
+            <button 
+              onClick={handleExportFiltered}
+              className="p-1.5 rounded-lg transition-colors bg-white border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+              title="导出当前筛选结果"
+            >
+              <Icons.Download size={16} />
+            </button>
+          </div>
         </div>
       </header>
 

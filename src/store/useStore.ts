@@ -37,6 +37,15 @@ interface AppState {
 
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
+
+  privacyMode: boolean;
+  togglePrivacyMode: () => void;
+
+  passcode: string | null;
+  setPasscode: (code: string | null) => void;
+  isLocked: boolean;
+  unlock: () => void;
+  lock: () => void;
 }
 
 const initialCategories: Category[] = [
@@ -68,8 +77,15 @@ export const useStore = create<AppState>()(
       templates: [],
       goals: [],
       showReimbursables: true,
+      privacyMode: false,
+      passcode: null,
+      isLocked: false,
 
       toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
+      togglePrivacyMode: () => set((state) => ({ privacyMode: !state.privacyMode })),
+      setPasscode: (code) => set({ passcode: code, isLocked: !!code }),
+      unlock: () => set({ isLocked: false }),
+      lock: () => set((state) => ({ isLocked: !!state.passcode })),
 
       markPreviousAsReimbursed: () => set((state) => ({
         transactions: state.transactions.map(t => 

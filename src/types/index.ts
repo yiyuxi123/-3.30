@@ -71,4 +71,5 @@ export interface SavingGoal {
   deadline?: string; // ISO string
   color: string;
   icon: string;
+  accountId?: string;
 }

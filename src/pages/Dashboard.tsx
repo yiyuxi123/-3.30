@@ -94,10 +94,11 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const expensesByCategory = useMemo(() => {
     const expenses = currentMonthTransactions.filter(t => t.type === 'expense');
     const grouped = expenses.reduce((acc, t) => {
-      if (!acc[t.categoryId]) {
-        acc[t.categoryId] = 0;
+      const catId = t.categoryId || 'unknown';
+      if (!acc[catId]) {
+        acc[catId] = 0;
       }
-      acc[t.categoryId] += t.amount;
+      acc[catId] += t.amount;
       return acc;
     }, {} as Record<string, number>);
 
@@ -106,7 +107,7 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
         const category = categories.find(c => c.id === categoryId);
         return {
           name: category?.name || '未知',
-          amount,
+          amount: Number(amount),
           color: category?.color || '#9ca3af'
         };
       })
