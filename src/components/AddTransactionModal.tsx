@@ -122,32 +122,6 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
 
   const filteredCategories = categories.filter(c => c.type === type);
 
-  const handleNumberClick = (num: string) => {
-    if (num === '.' && amount.includes('.')) return;
-    if (amount === '0' && num !== '.') {
-      setAmount(num === '00' ? '0' : num);
-    } else {
-      // Limit to 2 decimal places
-      if (amount.includes('.')) {
-        const [, decimal] = amount.split('.');
-        if (decimal && decimal.length >= 2) return;
-        if (num === '00' && decimal && decimal.length === 1) {
-          setAmount(prev => prev + '0');
-          return;
-        }
-      }
-      setAmount(prev => prev + num);
-    }
-  };
-
-  const handleDelete = () => {
-    setAmount(prev => prev.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    setAmount('');
-  };
-
   const [showNumpad, setShowNumpad] = useState(false);
 
   const availableTags = React.useMemo(() => {
@@ -441,9 +415,8 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         {/* Custom Numpad */}
         {showNumpad && (
           <Numpad
-            onNumberClick={handleNumberClick}
-            onDelete={handleDelete}
-            onClear={handleClear}
+            value={amount}
+            onChange={setAmount}
             onComplete={() => setShowNumpad(false)}
           />
         )}

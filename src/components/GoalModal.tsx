@@ -81,39 +81,10 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
     }
   };
 
-  const handleNumberClick = (num: string) => {
+  const handleNumpadChange = (val: string) => {
     if (!activeInput) return;
-    const currentVal = activeInput === 'target' ? targetAmount : currentAmount;
-    
-    if (num === '.' && currentVal.includes('.')) return;
-    if (currentVal === '0' && num !== '.') {
-      if (activeInput === 'target') setTargetAmount(num === '00' ? '0' : num);
-      else setCurrentAmount(num === '00' ? '0' : num);
-    } else {
-      if (currentVal.includes('.')) {
-        const [, decimal] = currentVal.split('.');
-        if (decimal && decimal.length >= 2) return;
-        if (num === '00' && decimal && decimal.length === 1) {
-          if (activeInput === 'target') setTargetAmount(prev => prev + '0');
-          else setCurrentAmount(prev => prev + '0');
-          return;
-        }
-      }
-      if (activeInput === 'target') setTargetAmount(prev => prev + num);
-      else setCurrentAmount(prev => prev + num);
-    }
-  };
-
-  const handleNumpadDelete = () => {
-    if (!activeInput) return;
-    if (activeInput === 'target') setTargetAmount(prev => prev.slice(0, -1));
-    else setCurrentAmount(prev => prev.slice(0, -1));
-  };
-
-  const handleClear = () => {
-    if (!activeInput) return;
-    if (activeInput === 'target') setTargetAmount('');
-    else setCurrentAmount('');
+    if (activeInput === 'target') setTargetAmount(val);
+    else setCurrentAmount(val);
   };
 
   return (
@@ -230,7 +201,7 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">颜色</label>
-                  <div className="flex space-x-3 overflow-x-auto p-2 -mx-2 scrollbar-hide">
+                  <div className="flex space-x-3 overflow-x-auto py-3 px-2 -mx-2 scrollbar-hide">
                     {COLORS.map(c => (
                       <button
                         key={c}
@@ -271,9 +242,8 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
 
           {activeInput && (
             <Numpad
-              onNumberClick={handleNumberClick}
-              onDelete={handleNumpadDelete}
-              onClear={handleClear}
+              value={activeInput === 'target' ? targetAmount : currentAmount}
+              onChange={handleNumpadChange}
               onComplete={() => setActiveInput(null)}
             />
           )}
