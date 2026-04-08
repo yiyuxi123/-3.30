@@ -76,6 +76,19 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
     if (e) e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
 
+    if (type !== 'transfer' && !categoryId) {
+      alert('请选择分类');
+      return;
+    }
+    if (type !== 'income' && !fromAccountId) {
+      alert('请选择付款账户');
+      return;
+    }
+    if (type !== 'expense' && !toAccountId) {
+      alert('请选择收款账户');
+      return;
+    }
+
     const tags = tagsInput.split(/[,，\s]+/).map(t => t.trim()).filter(t => t);
 
     const txData = {

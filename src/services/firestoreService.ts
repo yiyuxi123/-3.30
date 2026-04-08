@@ -1,4 +1,4 @@
-import { collection, doc, writeBatch, deleteDoc, setDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, writeBatch, deleteDoc, setDoc, getDocs, deleteField } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { Account, Budget, Category, Transaction, TransactionTemplate, SavingGoal } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -68,10 +68,10 @@ export const firestoreService = {
       updateData.history = newHistory;
     }
 
-    // Remove undefined values as Firestore doesn't support them
+    // Use deleteField() for undefined values to remove them from Firestore
     Object.keys(updateData).forEach(key => {
       if (updateData[key] === undefined) {
-        delete updateData[key];
+        updateData[key] = deleteField();
       }
     });
 
@@ -184,7 +184,7 @@ export const firestoreService = {
     const batch = writeBatch(db);
     const cleanData = { ...data };
     Object.keys(cleanData).forEach(key => {
-      if (cleanData[key] === undefined) delete cleanData[key];
+      if (cleanData[key] === undefined) cleanData[key] = deleteField();
     });
     batch.update(doc(db, `users/${userId}/${collectionName}`, id), cleanData);
     await batch.commit();
