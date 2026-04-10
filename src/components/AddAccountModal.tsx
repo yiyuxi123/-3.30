@@ -24,7 +24,7 @@ export default function AddAccountModal({ onClose }: { onClose: () => void }) {
     addAccount({
       name,
       type,
-      balance: Number(balance) || 0,
+      balance: Math.round((Number(balance) || 0) * 100) / 100,
       color,
       icon
     });

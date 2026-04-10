@@ -25,7 +25,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
     if (isOpen) {
       if (initialTransaction) {
         setType(initialTransaction.type);
-        setAmount(initialTransaction.amount.toString());
+        setAmount(Number(initialTransaction.amount.toFixed(2)).toString());
         setCategoryId(initialTransaction.categoryId || '');
         setFromAccountId(initialTransaction.fromAccountId || '');
         setToAccountId(initialTransaction.toAccountId || '');
@@ -93,7 +93,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
 
     const txData = {
       type,
-      amount: Number(amount),
+      amount: Math.round(Number(amount) * 100) / 100,
       date: new Date(date).toISOString(),
       categoryId: type !== 'transfer' ? categoryId : undefined,
       fromAccountId: type !== 'income' ? fromAccountId : undefined,

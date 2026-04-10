@@ -7,13 +7,13 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
   const { updateAccount, deleteAccount } = useStore();
   const [name, setName] = useState(account.name);
   const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit'>(account.type);
-  const [balance, setBalance] = useState(account.balance.toString());
+  const [balance, setBalance] = useState(Number(account.balance.toFixed(2)).toString());
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     setName(account.name);
     setType(account.type);
-    setBalance(account.balance.toString());
+    setBalance(Number(account.balance.toFixed(2)).toString());
     setShowConfirm(false);
   }, [account]);
 
@@ -33,7 +33,7 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
     updateAccount(account.id, {
       name,
       type,
-      balance: Number(balance) || 0,
+      balance: Math.round((Number(balance) || 0) * 100) / 100,
       color,
       icon
     });

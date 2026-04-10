@@ -37,7 +37,8 @@ export const firestoreService = {
         if (acc.id === newTx.toAccountId) balanceChange += newTx.amount;
       }
       if (balanceChange !== 0) {
-        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance: acc.balance + balanceChange });
+        const newBalance = Math.round((acc.balance + balanceChange) * 100) / 100;
+        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance: newBalance });
       }
     });
 
@@ -110,7 +111,7 @@ export const firestoreService = {
       }
       
       if (balance !== acc.balance) {
-        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance });
+        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance: Math.round(balance * 100) / 100 });
       }
     });
 
@@ -147,7 +148,7 @@ export const firestoreService = {
         if (acc.id === transaction.toAccountId) balance -= transaction.amount;
       }
       if (balance !== acc.balance) {
-        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance });
+        batch.update(doc(db, `users/${userId}/accounts`, acc.id), { balance: Math.round(balance * 100) / 100 });
       }
     });
 
@@ -261,6 +262,14 @@ export const firestoreService = {
           // Truncate excessively long notes
           if (coll === 'transactions' && cleanItem.note && typeof cleanItem.note === 'string' && cleanItem.note.length > 500) {
             cleanItem.note = cleanItem.note.substring(0, 500);
+          }
+
+          // Fix floating point precision
+          if (coll === 'accounts' && typeof cleanItem.balance === 'number') {
+            cleanItem.balance = Math.round(cleanItem.balance * 100) / 100;
+          }
+          if (coll === 'transactions' && typeof cleanItem.amount === 'number') {
+            cleanItem.amount = Math.round(cleanItem.amount * 100) / 100;
           }
 
           currentBatch.set(doc(db, `users/${userId}/${coll}`, id), cleanItem);

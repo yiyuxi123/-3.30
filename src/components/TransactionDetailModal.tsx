@@ -71,7 +71,7 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
                   addTemplate({
                     name: `${transaction.type === 'transfer' ? '转账' : category?.name || '未知'}模板`,
                     type: transaction.type,
-                    amount: transaction.amount,
+                    amount: Math.round(transaction.amount * 100) / 100,
                     categoryId: transaction.categoryId,
                     fromAccountId: transaction.fromAccountId,
                     toAccountId: transaction.toAccountId,

@@ -30,8 +30,8 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
     if (isOpen) {
       if (goal) {
         setName(goal.name);
-        setTargetAmount(goal.targetAmount.toString());
-        setCurrentAmount(goal.currentAmount.toString());
+        setTargetAmount(Number(goal.targetAmount.toFixed(2)).toString());
+        setCurrentAmount(Number(goal.currentAmount.toFixed(2)).toString());
         setDeadline(goal.deadline ? goal.deadline.split('T')[0] : '');
         setColor(goal.color);
         setIcon(goal.icon);
@@ -58,8 +58,8 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
 
     const goalData = {
       name,
-      targetAmount: Number(targetAmount),
-      currentAmount: Number(currentAmount) || 0,
+      targetAmount: Math.round(Number(targetAmount) * 100) / 100,
+      currentAmount: Math.round((Number(currentAmount) || 0) * 100) / 100,
       deadline: deadline ? new Date(deadline).toISOString() : undefined,
       color,
       icon,

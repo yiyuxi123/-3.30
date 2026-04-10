@@ -8,9 +8,9 @@ export default function EditBudgetModal({ onClose }: { onClose: () => void }) {
   const totalBudget = budgets.find(b => !b.categoryId);
   const categoryBudgets = budgets.filter(b => b.categoryId);
   
-  const [totalAmount, setTotalAmount] = useState(totalBudget ? totalBudget.amount.toString() : '');
+  const [totalAmount, setTotalAmount] = useState(totalBudget ? Number(totalBudget.amount.toFixed(2)).toString() : '');
   const [catBudgets, setCatBudgets] = useState<{id?: string, categoryId: string, amount: string}[]>(
-    categoryBudgets.map(b => ({ id: b.id, categoryId: b.categoryId!, amount: b.amount.toString() }))
+    categoryBudgets.map(b => ({ id: b.id, categoryId: b.categoryId!, amount: Number(b.amount.toFixed(2)).toString() }))
   );
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
@@ -40,7 +40,7 @@ export default function EditBudgetModal({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     
     // Save total budget
-    const numTotal = Number(totalAmount);
+    const numTotal = Math.round(Number(totalAmount) * 100) / 100;
     if (!isNaN(numTotal)) {
       if (totalBudget) {
         updateBudget(totalBudget.id, { amount: numTotal });
@@ -51,7 +51,7 @@ export default function EditBudgetModal({ onClose }: { onClose: () => void }) {
 
     // Save category budgets
     catBudgets.forEach(cb => {
-      const numAmount = Number(cb.amount);
+      const numAmount = Math.round(Number(cb.amount) * 100) / 100;
       if (!isNaN(numAmount) && numAmount > 0) {
         if (cb.id) {
           updateBudget(cb.id, { amount: numAmount, categoryId: cb.categoryId });

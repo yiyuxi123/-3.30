@@ -23,6 +23,8 @@ const initialAccounts = [
   { name: '招商银行', type: 'bank', balance: 20000, color: '#ef4444', icon: 'CreditCard' },
 ];
 
+let isInitializing = false;
+
 export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
@@ -36,19 +38,27 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (currentUser) {
         // Check if new user and bootstrap
         const userId = currentUser.uid;
-        const categoriesSnap = await getDocs(collection(db, `users/${userId}/categories`));
-        if (categoriesSnap.empty) {
-          const batch = writeBatch(db);
-          initialCategories.forEach(cat => {
-            const id = uuidv4();
-            batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId });
-          });
-          initialAccounts.forEach(acc => {
-            const id = uuidv4();
-            batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId });
-          });
-          batch.set(doc(db, `users/${userId}/budgets`, uuidv4()), { amount: 5000, period: 'monthly', userId });
-          await batch.commit();
+        if (!isInitializing) {
+          isInitializing = true;
+          try {
+            const categoriesSnap = await getDocs(collection(db, `users/${userId}/categories`));
+            if (categoriesSnap.empty) {
+              const batch = writeBatch(db);
+              initialCategories.forEach(cat => {
+                const id = uuidv4();
+                batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId });
+              });
+              initialAccounts.forEach(acc => {
+                const id = uuidv4();
+                batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId });
+              });
+              batch.set(doc(db, `users/${userId}/budgets`, uuidv4()), { amount: 5000, period: 'monthly', userId });
+              await batch.commit();
+            }
+          } finally {
+            // Keep it true for a short time to prevent immediate re-runs in strict mode
+            setTimeout(() => { isInitializing = false; }, 2000);
+          }
         }
       }
       
