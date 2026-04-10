@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, isWithinInterval, parseISO, subMonths, addMonths, subYears, addYears } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Sector, AreaChart, Area } from 'recharts';
 import * as Icons from 'lucide-react';
-import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ChevronLeft, ChevronRight, PieChart as PieChartIcon, BarChart2, TrendingUp, Scale, Wallet, Tags } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const renderActiveShape = (props: any) => {
@@ -24,23 +24,46 @@ const renderActiveShape = (props: any) => {
   );
 };
 
+const METRICS_CONFIG = [
+  { key: 'insights', label: '智能洞察', icon: Sparkles },
+  { key: 'category', label: '分类占比', icon: PieChartIcon },
+  { key: 'trend', label: '收支趋势', icon: BarChart2 },
+  { key: 'assetTrend', label: '资产趋势', icon: TrendingUp },
+  { key: 'fixedVsVariable', label: '固定/浮动', icon: Scale, expenseOnly: true },
+  { key: 'account', label: '账户分布', icon: Wallet },
+  { key: 'tags', label: '标签统计', icon: Tags },
+] as const;
+
 export default function Statistics() {
   const { transactions, categories, budgets, accounts } = useStore();
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [period, setPeriod] = useState<'month' | 'year'>('month');
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [visibleMetrics, setVisibleMetrics] = useState({
-    insights: true,
-    category: true,
-    trend: true,
-    fixedVsVariable: true,
-    account: false,
-    assetTrend: true,
-    tags: false,
+  
+  const [visibleMetrics, setVisibleMetrics] = useState(() => {
+    const saved = localStorage.getItem('statistics_visible_metrics');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      insights: true,
+      category: true,
+      trend: true,
+      fixedVsVariable: true,
+      account: false,
+      assetTrend: true,
+      tags: false,
+    };
   });
 
+  useEffect(() => {
+    localStorage.setItem('statistics_visible_metrics', JSON.stringify(visibleMetrics));
+  }, [visibleMetrics]);
+
   const toggleMetric = (key: keyof typeof visibleMetrics) => {
-    setVisibleMetrics(prev => ({ ...prev, [key]: !prev[key] }));
+    setVisibleMetrics((prev: any) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const [activeIndexCategory, setActiveIndexCategory] = useState<number | undefined>(undefined);
@@ -243,16 +266,30 @@ export default function Statistics() {
           </div>
 
           {/* Metrics Toggles */}
-          <div className="flex flex-wrap gap-2 justify-center mt-4">
-            <button onClick={() => toggleMetric('insights')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.insights ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>智能洞察</button>
-            <button onClick={() => toggleMetric('category')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.category ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>分类占比</button>
-            <button onClick={() => toggleMetric('trend')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.trend ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>收支趋势</button>
-            <button onClick={() => toggleMetric('assetTrend')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.assetTrend ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>资产趋势</button>
-            {type === 'expense' && (
-              <button onClick={() => toggleMetric('fixedVsVariable')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.fixedVsVariable ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>固定/浮动</button>
-            )}
-            <button onClick={() => toggleMetric('account')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.account ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>账户分布</button>
-            <button onClick={() => toggleMetric('tags')} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${visibleMetrics.tags ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}>标签统计</button>
+          <div className="mt-6">
+            <p className="text-xs font-medium text-gray-400 mb-3 px-1">显示模块</p>
+            <div className="flex overflow-x-auto pb-2 -mx-4 px-4 space-x-2 scrollbar-hide">
+              {METRICS_CONFIG.map(metric => {
+                if (metric.expenseOnly && type !== 'expense') return null;
+                const isActive = visibleMetrics[metric.key as keyof typeof visibleMetrics];
+                const Icon = metric.icon;
+                
+                return (
+                  <button
+                    key={metric.key}
+                    onClick={() => toggleMetric(metric.key as keyof typeof visibleMetrics)}
+                    className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                      isActive 
+                        ? 'bg-gray-900 text-white shadow-md' 
+                        : 'bg-white text-gray-500 border border-gray-100 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon size={16} className={isActive ? 'text-emerald-400' : 'text-gray-400'} />
+                    <span>{metric.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </header>
@@ -332,8 +369,8 @@ export default function Statistics() {
             className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100"
           >
             <h3 className="text-lg font-bold text-gray-900 mb-4 px-2">分类占比</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={chartData}
