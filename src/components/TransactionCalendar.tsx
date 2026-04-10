@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { 
   format, 
@@ -43,6 +43,22 @@ export default function TransactionCalendar() {
     start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }),
     end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 })
   });
+
+  const { maxNetIncome, maxNetExpense } = useMemo(() => {
+    let maxInc = 0;
+    let maxExp = 0;
+    daysInMonth.forEach(day => {
+      if (isSameMonth(day, currentMonth)) {
+        const dayTransactions = filteredTransactions.filter(t => isSameDay(parseISO(t.date), day));
+        const exp = dayTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+        const inc = dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+        const net = inc - exp;
+        if (net > maxInc) maxInc = net;
+        if (net < -maxExp) maxExp = Math.abs(net);
+      }
+    });
+    return { maxNetIncome: maxInc, maxNetExpense: maxExp };
+  }, [daysInMonth, filteredTransactions, currentMonth]);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -96,17 +112,37 @@ export default function TransactionCalendar() {
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const isDayToday = isToday(day);
 
+            let customStyle = {};
+            let bgClass = '';
+
+            if (isSelected) {
+              bgClass = 'bg-gray-900 text-white shadow-md ring-2 ring-gray-900 ring-offset-1';
+            } else if (!isCurrentMonth) {
+              bgClass = 'opacity-40 bg-gray-50/50';
+            } else {
+              const net = income - expense;
+              if (net > 0) {
+                const intensity = maxNetIncome > 0 ? Math.max(0.05, net / maxNetIncome) : 0;
+                customStyle = { backgroundColor: `rgba(16, 185, 129, ${intensity * 0.3})` }; // Emerald
+                bgClass = 'hover:brightness-95';
+              } else if (net < 0) {
+                const intensity = maxNetExpense > 0 ? Math.max(0.05, Math.abs(net) / maxNetExpense) : 0;
+                customStyle = { backgroundColor: `rgba(239, 68, 68, ${intensity * 0.3})` }; // Red
+                bgClass = 'hover:brightness-95';
+              } else if (expense > 0 || income > 0) {
+                customStyle = { backgroundColor: `rgba(156, 163, 175, 0.15)` }; // Gray for net zero but active
+                bgClass = 'hover:brightness-95';
+              } else {
+                bgClass = 'bg-white hover:bg-gray-50';
+              }
+            }
+
             return (
               <button
                 key={idx}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center p-1 rounded-xl min-h-[60px] transition-all ${
-                  isSelected 
-                    ? 'bg-gray-900 text-white shadow-md ring-2 ring-gray-900 ring-offset-1' 
-                    : isCurrentMonth 
-                      ? 'hover:bg-gray-50 bg-white' 
-                      : 'opacity-40 bg-gray-50/50'
-                }`}
+                style={customStyle}
+                className={`flex flex-col items-center p-1 rounded-xl min-h-[60px] transition-all ${bgClass}`}
               >
                 <span className={`text-sm font-medium mb-1 ${
                   isDayToday && !isSelected ? 'text-emerald-500 font-bold' : ''
@@ -115,14 +151,14 @@ export default function TransactionCalendar() {
                 </span>
                 
                 <div className="flex flex-col items-center w-full space-y-0.5 mt-auto">
-                  {expense > 0 && (
-                    <span className={`text-[9px] font-medium truncate w-full text-center ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>
-                      -{expense > 999 ? '999+' : expense.toFixed(0)}
+                  {income > 0 && (
+                    <span className={`text-[9px] font-semibold truncate w-full text-center ${isSelected ? 'text-emerald-300' : 'text-emerald-600'}`}>
+                      +{income > 999 ? '999+' : income.toFixed(0)}
                     </span>
                   )}
-                  {income > 0 && (
-                    <span className={`text-[9px] font-medium truncate w-full text-center ${isSelected ? 'text-emerald-300' : 'text-emerald-500'}`}>
-                      +{income > 999 ? '999+' : income.toFixed(0)}
+                  {expense > 0 && (
+                    <span className={`text-[9px] font-semibold truncate w-full text-center ${isSelected ? 'text-gray-300' : 'text-red-500'}`}>
+                      -{expense > 999 ? '999+' : expense.toFixed(0)}
                     </span>
                   )}
                   {expense === 0 && income === 0 && (

@@ -74,7 +74,10 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
 
   const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
-    if (!amount || isNaN(Number(amount))) return;
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      alert('请输入有效的金额');
+      return;
+    }
 
     if (type !== 'transfer' && !categoryId) {
       alert('请选择分类');
@@ -86,6 +89,10 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
     }
     if (type !== 'expense' && !toAccountId) {
       alert('请选择收款账户');
+      return;
+    }
+    if (type === 'transfer' && fromAccountId === toAccountId) {
+      alert('付款账户和收款账户不能相同');
       return;
     }
 
@@ -120,7 +127,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         if (feeCategory) {
           addTransaction({
             type: 'expense',
-            amount: Number(fee),
+            amount: Math.round(Number(fee) * 100) / 100,
             date: new Date(date).toISOString(),
             categoryId: feeCategory.id,
             fromAccountId: fromAccountId,

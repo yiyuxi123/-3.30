@@ -76,6 +76,11 @@ export default function Accounts() {
     exportToCSV(`accounts_${format(new Date(), 'yyyyMMdd')}.csv`, [headers, ...rows]);
   };
 
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
+  const [restoreData, setRestoreData] = useState<any>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearConfirm2, setShowClearConfirm2] = useState(false);
+
   const handleBackup = () => {
     const data = {
       accounts,
@@ -103,16 +108,8 @@ export default function Accounts() {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.accounts && data.transactions && data.categories) {
-          if (window.confirm('恢复数据将覆盖当前所有数据，确定要继续吗？')) {
-            try {
-              const { firestoreService } = await import('../services/firestoreService');
-              await firestoreService.restoreData(data);
-              alert('数据恢复成功！');
-            } catch (err: any) {
-              console.error('Restore failed:', err);
-              alert(`数据恢复失败: ${err.message}`);
-            }
-          }
+          setRestoreData(data);
+          setShowRestoreConfirm(true);
         } else {
           alert('无效的备份文件格式。');
         }
@@ -125,18 +122,40 @@ export default function Accounts() {
     e.target.value = '';
   };
 
-  const handleClearAll = async () => {
-    if (window.confirm('警告：此操作将清空所有账户、账单和分类数据，且不可恢复！确定要继续吗？')) {
-      if (window.confirm('再次确认：您真的要清空所有数据吗？')) {
-        try {
-          const { firestoreService } = await import('../services/firestoreService');
-          await firestoreService.clearAllData();
-          alert('所有数据已清空。');
-        } catch (err: any) {
-          console.error('Clear failed:', err);
-          alert(`清空数据失败: ${err.message}`);
-        }
-      }
+  const confirmRestore = async () => {
+    if (!restoreData) return;
+    try {
+      const { firestoreService } = await import('../services/firestoreService');
+      await firestoreService.restoreData(restoreData);
+      alert('数据恢复成功！');
+    } catch (err: any) {
+      console.error('Restore failed:', err);
+      alert(`数据恢复失败: ${err.message}`);
+    } finally {
+      setShowRestoreConfirm(false);
+      setRestoreData(null);
+    }
+  };
+
+  const handleClearAll = () => {
+    setShowClearConfirm(true);
+  };
+
+  const confirmClearStep1 = () => {
+    setShowClearConfirm(false);
+    setShowClearConfirm2(true);
+  };
+
+  const confirmClearStep2 = async () => {
+    try {
+      const { firestoreService } = await import('../services/firestoreService');
+      await firestoreService.clearAllData();
+      alert('所有数据已清空。');
+    } catch (err: any) {
+      console.error('Clear failed:', err);
+      alert(`清空数据失败: ${err.message}`);
+    } finally {
+      setShowClearConfirm2(false);
     }
   };
 
@@ -399,6 +418,93 @@ export default function Accounts() {
       {selectedAccount && <EditAccountModal account={selectedAccount} onClose={() => setSelectedAccount(null)} />}
       <GoalModal isOpen={isAddGoalOpen} onClose={() => setIsAddGoalOpen(false)} />
       <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
+
+      {/* Restore Confirm Modal */}
+      {showRestoreConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+          >
+            <h3 className="text-xl font-bold text-gray-900 mb-2">确认恢复数据</h3>
+            <p className="text-gray-500 mb-6">恢复数据将覆盖当前所有数据，确定要继续吗？</p>
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => {
+                  setShowRestoreConfirm(false);
+                  setRestoreData(null);
+                }}
+                className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={confirmRestore}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+              >
+                确定恢复
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Clear Confirm Modal 1 */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+          >
+            <h3 className="text-xl font-bold text-red-600 mb-2">警告：清空数据</h3>
+            <p className="text-gray-500 mb-6">此操作将清空所有账户、账单和分类数据，且不可恢复！确定要继续吗？</p>
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={confirmClearStep1}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+              >
+                继续
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Clear Confirm Modal 2 */}
+      {showClearConfirm2 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border-2 border-red-500"
+          >
+            <h3 className="text-xl font-bold text-red-600 mb-2">最后确认</h3>
+            <p className="text-gray-700 font-medium mb-6">再次确认：您真的要清空所有数据吗？</p>
+            <div className="flex space-x-3">
+              <button 
+                onClick={() => setShowClearConfirm2(false)}
+                className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button 
+                onClick={confirmClearStep2}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                确定清空
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

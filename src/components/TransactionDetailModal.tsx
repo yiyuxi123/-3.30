@@ -40,8 +40,8 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
     isReimbursable: '可报销'
   };
 
-  const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || id;
-  const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || id;
+  const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || '已删除分类';
+  const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || '已删除账户';
 
   const formatValue = (field: string, value: any) => {
     if (value === undefined || value === null || value === '') return '无';

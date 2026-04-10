@@ -22,6 +22,8 @@ export default function Transactions() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { deleteTransaction } = useStore();
 
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+
   const toggleSelection = (id: string) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -34,11 +36,14 @@ export default function Transactions() {
 
   const handleBatchDelete = () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`确定要删除选中的 ${selectedIds.size} 条记录吗？`)) {
-      selectedIds.forEach(id => deleteTransaction(id));
-      setSelectedIds(new Set());
-      setIsSelectionMode(false);
-    }
+    setShowBatchDeleteConfirm(true);
+  };
+
+  const confirmBatchDelete = () => {
+    selectedIds.forEach(id => deleteTransaction(id));
+    setSelectedIds(new Set());
+    setIsSelectionMode(false);
+    setShowBatchDeleteConfirm(false);
   };
 
   // Get unique months for filter
@@ -407,6 +412,37 @@ export default function Transactions() {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Batch Delete Confirm Modal */}
+      <AnimatePresence>
+        {showBatchDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-2">确认删除</h3>
+              <p className="text-gray-500 mb-6">确定要删除选中的 {selectedIds.size} 条记录吗？此操作不可恢复。</p>
+              <div className="flex space-x-3">
+                <button 
+                  onClick={() => setShowBatchDeleteConfirm(false)}
+                  className="flex-1 py-3 rounded-xl font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                <button 
+                  onClick={confirmBatchDelete}
+                  className="flex-1 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                >
+                  确定删除
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

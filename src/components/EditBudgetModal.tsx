@@ -42,21 +42,29 @@ export default function EditBudgetModal({ onClose }: { onClose: () => void }) {
     // Save total budget
     const numTotal = Math.round(Number(totalAmount) * 100) / 100;
     if (!isNaN(numTotal)) {
-      if (totalBudget) {
-        updateBudget(totalBudget.id, { amount: numTotal });
-      } else {
-        addBudget({ amount: numTotal, period: 'monthly' });
+      if (numTotal > 0) {
+        if (totalBudget) {
+          updateBudget(totalBudget.id, { amount: numTotal });
+        } else {
+          addBudget({ amount: numTotal, period: 'monthly' });
+        }
+      } else if (totalBudget) {
+        deleteBudget(totalBudget.id);
       }
     }
 
     // Save category budgets
     catBudgets.forEach(cb => {
       const numAmount = Math.round(Number(cb.amount) * 100) / 100;
-      if (!isNaN(numAmount) && numAmount > 0) {
-        if (cb.id) {
-          updateBudget(cb.id, { amount: numAmount, categoryId: cb.categoryId });
-        } else {
-          addBudget({ amount: numAmount, period: 'monthly', categoryId: cb.categoryId });
+      if (!isNaN(numAmount)) {
+        if (numAmount > 0) {
+          if (cb.id) {
+            updateBudget(cb.id, { amount: numAmount, categoryId: cb.categoryId });
+          } else {
+            addBudget({ amount: numAmount, period: 'monthly', categoryId: cb.categoryId });
+          }
+        } else if (cb.id) {
+          deleteBudget(cb.id);
         }
       }
     });

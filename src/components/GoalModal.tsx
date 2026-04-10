@@ -54,7 +54,10 @@ export default function GoalModal({ isOpen, onClose, goal }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !targetAmount) return;
+    if (!name || !targetAmount || Number(targetAmount) <= 0) {
+      alert('请输入有效的目标金额');
+      return;
+    }
 
     const goalData = {
       name,
