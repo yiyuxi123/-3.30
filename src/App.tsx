@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Home, List, PieChart, User, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Dashboard from './pages/Dashboard';
@@ -7,10 +7,51 @@ import Statistics from './pages/Statistics';
 import Accounts from './pages/Accounts';
 import AddTransactionModal from './components/AddTransactionModal';
 import { FirebaseProvider } from './components/FirebaseProvider';
+import { useStore } from './store/useStore';
 
-export default function App() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const { accounts, transactions, addTransaction, categories } = useStore();
+
+  useEffect(() => {
+    // Check for auto-deposits
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+    const currentDate = today.getDate();
+
+    accounts.forEach(account => {
+      if (account.type === 'auto_deposit' && account.autoDepositAmount && account.autoDepositDay) {
+        if (currentDate >= account.autoDepositDay) {
+          // Check if we already deposited this month
+          const hasDepositedThisMonth = transactions.some(t => {
+            if (t.toAccountId !== account.id) return false;
+            const txDate = new Date(t.date);
+            return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear && t.note === '自动入账';
+          });
+
+          if (!hasDepositedThisMonth) {
+            // Find an income category for auto deposit, or just use the first income category
+            const incomeCategory = categories.find(c => c.type === 'income' && c.name.includes('入账')) || categories.find(c => c.type === 'income');
+            
+            if (incomeCategory) {
+              const depositDate = new Date(currentYear, currentMonth, account.autoDepositDay);
+              addTransaction({
+                type: 'income',
+                amount: account.autoDepositAmount,
+                categoryId: incomeCategory.id,
+                toAccountId: account.id,
+                date: depositDate.toISOString(),
+                note: '自动入账',
+                tags: ['自动']
+              });
+            }
+          }
+        }
+      }
+    });
+  }, [accounts, transactions, addTransaction, categories]);
 
   const pageVariants = {
     initial: { opacity: 0, y: 10, scale: 0.98 },
@@ -25,10 +66,9 @@ export default function App() {
   };
 
   return (
-    <FirebaseProvider>
-      <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto relative">
+    <div className="flex flex-col h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto relative">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -98,7 +138,14 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <FirebaseProvider>
+      <AppContent />
     </FirebaseProvider>
   );
 }

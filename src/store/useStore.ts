@@ -61,6 +61,8 @@ const initialAccounts: Account[] = [
   { id: '2', name: '支付宝', type: 'alipay', balance: 5000, color: '#3b82f6', icon: 'Smartphone' },
   { id: '3', name: '微信', type: 'wechat', balance: 3000, color: '#22c55e', icon: 'MessageCircle' },
   { id: '4', name: '招商银行', type: 'bank', balance: 20000, color: '#ef4444', icon: 'CreditCard' },
+  { id: '5', name: '公积金', type: 'auto_deposit', balance: 0, color: '#8b5cf6', icon: 'PiggyBank' },
+  { id: '6', name: '医保', type: 'auto_deposit', balance: 0, color: '#ec4899', icon: 'Heart' },
 ];
 
 export const useStore = create<AppState>()(

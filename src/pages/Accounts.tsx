@@ -194,8 +194,17 @@ export default function Accounts() {
         <h3 className="text-lg font-bold text-gray-900">我的账户</h3>
         
         <div className="grid grid-cols-1 gap-3">
-          {accounts.map((account, index) => {
+          {accounts.filter(a => !a.isHidden).map((account, index) => {
             const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
+            
+            const typeLabels: Record<string, string> = {
+              'cash': '现金',
+              'bank': '银行卡',
+              'alipay': '支付宝',
+              'wechat': '微信',
+              'credit': '信用卡',
+              'auto_deposit': '自动入账'
+            };
             
             return (
               <motion.div 
@@ -217,7 +226,7 @@ export default function Accounts() {
                   </div>
                   <div>
                     <h4 className="font-bold text-gray-900">{account.name}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5 capitalize">{account.type}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -229,6 +238,62 @@ export default function Accounts() {
             );
           })}
         </div>
+
+        {accounts.some(a => a.isHidden) && (
+          <div className="pt-2">
+            <details className="group">
+              <summary className="flex items-center justify-between cursor-pointer list-none text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors py-2">
+                <span>折叠的账户 ({accounts.filter(a => a.isHidden).length})</span>
+                <Icons.ChevronDown size={16} className="transition-transform group-open:-rotate-180" />
+              </summary>
+              <div className="grid grid-cols-1 gap-3 mt-3">
+                {accounts.filter(a => a.isHidden).map((account, index) => {
+                  const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
+                  
+                  const typeLabels: Record<string, string> = {
+                    'cash': '现金',
+                    'bank': '银行卡',
+                    'alipay': '支付宝',
+                    'wechat': '微信',
+                    'credit': '信用卡',
+                    'auto_deposit': '自动入账'
+                  };
+                  
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+                      whileTap={{ scale: 0.98 }}
+                      key={account.id} 
+                      className="bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer transition-all opacity-75 hover:opacity-100"
+                      onClick={() => setSelectedAccount(account)}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner grayscale"
+                          style={{ backgroundColor: account.color }}
+                        >
+                          <IconComponent size={24} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900">{account.name}</h4>
+                          <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                          ¥{account.balance.toFixed(2)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </details>
+          </div>
+        )}
       </div>
 
       {/* Goals List */}

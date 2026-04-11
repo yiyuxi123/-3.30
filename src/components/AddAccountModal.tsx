@@ -5,8 +5,10 @@ import { useStore } from '../store/useStore';
 export default function AddAccountModal({ onClose }: { onClose: () => void }) {
   const { addAccount } = useStore();
   const [name, setName] = useState('');
-  const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit'>('bank');
+  const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit' | 'auto_deposit'>('bank');
   const [balance, setBalance] = useState('');
+  const [autoDepositAmount, setAutoDepositAmount] = useState('');
+  const [autoDepositDay, setAutoDepositDay] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,13 +22,16 @@ export default function AddAccountModal({ onClose }: { onClose: () => void }) {
     if (type === 'wechat') { icon = 'MessageCircle'; color = '#22c55e'; }
     if (type === 'credit') { icon = 'CreditCard'; color = '#f59e0b'; }
     if (type === 'bank') { icon = 'Landmark'; color = '#ef4444'; }
+    if (type === 'auto_deposit') { icon = 'PiggyBank'; color = '#8b5cf6'; }
 
     addAccount({
       name,
       type,
       balance: Math.round((Number(balance) || 0) * 100) / 100,
       color,
-      icon
+      icon,
+      autoDepositAmount: type === 'auto_deposit' && autoDepositAmount ? Number(autoDepositAmount) : undefined,
+      autoDepositDay: type === 'auto_deposit' && autoDepositDay ? Number(autoDepositDay) : undefined
     });
     onClose();
   };
@@ -66,6 +71,7 @@ export default function AddAccountModal({ onClose }: { onClose: () => void }) {
               <option value="alipay">支付宝</option>
               <option value="wechat">微信</option>
               <option value="credit">信用卡</option>
+              <option value="auto_deposit">自动入账 (如公积金/医保)</option>
             </select>
           </div>
 
@@ -80,6 +86,35 @@ export default function AddAccountModal({ onClose }: { onClose: () => void }) {
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
             />
           </div>
+
+          {type === 'auto_deposit' && (
+            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <h4 className="font-medium text-gray-900">自动入账设置</h4>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">每月入账金额</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  value={autoDepositAmount}
+                  onChange={e => setAutoDepositAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">每月入账日 (1-31)</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  max="31"
+                  value={autoDepositDay}
+                  onChange={e => setAutoDepositDay(e.target.value)}
+                  placeholder="15"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           <button 
             type="submit"

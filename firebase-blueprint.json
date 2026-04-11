@@ -6,10 +6,13 @@
       "type": "object",
       "properties": {
         "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["bank", "cash", "alipay", "wechat", "credit"] },
+        "type": { "type": "string", "enum": ["bank", "cash", "alipay", "wechat", "credit", "auto_deposit"] },
         "balance": { "type": "number" },
         "color": { "type": "string" },
         "icon": { "type": "string" },
+        "isHidden": { "type": "boolean" },
+        "autoDepositAmount": { "type": "number" },
+        "autoDepositDay": { "type": "number" },
         "userId": { "type": "string" }
       },
       "required": ["name", "type", "balance", "color", "icon", "userId"]
@@ -24,6 +27,8 @@
         "icon": { "type": "string" },
         "color": { "type": "string" },
         "isFixed": { "type": "boolean" },
+        "excludeFromBudget": { "type": "boolean" },
+        "excludeFromStats": { "type": "boolean" },
         "userId": { "type": "string" }
       },
       "required": ["name", "type", "icon", "color", "userId"]

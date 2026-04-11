@@ -30,6 +30,8 @@ export default function EditCategoryModal({
   const [color, setColor] = useState(category?.color || COLORS[0]);
   const [icon, setIcon] = useState(category?.icon || AVAILABLE_ICONS[0]);
   const [isFixed, setIsFixed] = useState(category?.isFixed || false);
+  const [excludeFromBudget, setExcludeFromBudget] = useState(category?.excludeFromBudget || false);
+  const [excludeFromStats, setExcludeFromStats] = useState(category?.excludeFromStats || false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const isNew = !category;
@@ -39,9 +41,9 @@ export default function EditCategoryModal({
     if (!name) return;
 
     if (isNew) {
-      addCategory({ name, type: defaultType, color, icon, isFixed });
+      addCategory({ name, type: defaultType, color, icon, isFixed, excludeFromBudget, excludeFromStats });
     } else {
-      updateCategory(category.id, { name, color, icon, isFixed });
+      updateCategory(category.id, { name, color, icon, isFixed, excludeFromBudget, excludeFromStats });
     }
     onClose();
   };
@@ -134,18 +136,48 @@ export default function EditCategoryModal({
 
             {/* Fixed Expense Toggle */}
             {defaultType === 'expense' && (
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                <div>
-                  <h4 className="font-medium text-gray-900">固定支出</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">房租、订阅等每月固定的开销</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div>
+                    <h4 className="font-medium text-gray-900">固定支出</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">房租、订阅等每月固定的开销</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFixed(!isFixed)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixed ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixed ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsFixed(!isFixed)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFixed ? 'bg-emerald-500' : 'bg-gray-300'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFixed ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div>
+                    <h4 className="font-medium text-gray-900">不计入预算</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">此分类的消费不会占用总预算额度</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExcludeFromBudget(!excludeFromBudget)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${excludeFromBudget ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${excludeFromBudget ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div>
+                    <h4 className="font-medium text-gray-900">不计入统计</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">此分类的消费不会计入本月总支出</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setExcludeFromStats(!excludeFromStats)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${excludeFromStats ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${excludeFromStats ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
               </div>
             )}
           </form>

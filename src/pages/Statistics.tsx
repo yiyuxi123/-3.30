@@ -27,9 +27,10 @@ const renderActiveShape = (props: any) => {
 const METRICS_CONFIG = [
   { key: 'insights', label: '智能洞察', icon: Sparkles },
   { key: 'category', label: '分类占比', icon: PieChartIcon },
+  { key: 'dailyAverage', label: '日均统计', icon: BarChart2 },
   { key: 'trend', label: '收支趋势', icon: BarChart2 },
   { key: 'assetTrend', label: '资产趋势', icon: TrendingUp },
-  { key: 'fixedVsVariable', label: '固定/浮动', icon: Scale, expenseOnly: true },
+  { key: 'fixedVsVariable', label: '固定/浮动', icon: Scale, expenseOnly: true as boolean },
   { key: 'account', label: '账户分布', icon: Wallet },
   { key: 'tags', label: '标签统计', icon: Tags },
 ] as const;
@@ -50,6 +51,7 @@ export default function Statistics() {
     return {
       insights: true,
       category: true,
+      dailyAverage: true,
       trend: true,
       fixedVsVariable: true,
       account: false,
@@ -58,9 +60,23 @@ export default function Statistics() {
     };
   });
 
+  const [dailyAverageCategories, setDailyAverageCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('statistics_daily_average_categories');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return []; // Empty means all categories are included by default, or maybe we should store excluded? Let's store included.
+  });
+
   useEffect(() => {
     localStorage.setItem('statistics_visible_metrics', JSON.stringify(visibleMetrics));
   }, [visibleMetrics]);
+
+  useEffect(() => {
+    localStorage.setItem('statistics_daily_average_categories', JSON.stringify(dailyAverageCategories));
+  }, [dailyAverageCategories]);
 
   const toggleMetric = (key: keyof typeof visibleMetrics) => {
     setVisibleMetrics((prev: any) => ({ ...prev, [key]: !prev[key] }));
@@ -90,9 +106,10 @@ export default function Statistics() {
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
       const d = new Date(t.date);
-      return t.type === type && isWithinInterval(d, { start, end });
+      const cat = categories.find(c => c.id === t.categoryId);
+      return t.type === type && isWithinInterval(d, { start, end }) && !cat?.excludeFromStats;
     });
-  }, [transactions, type, start, end]);
+  }, [transactions, type, start, end, categories]);
 
   const total = useMemo(() => filteredTransactions.reduce((sum, t) => sum + t.amount, 0), [filteredTransactions]);
 
@@ -190,6 +207,14 @@ export default function Statistics() {
     return period === 'month' ? baseBudget : baseBudget * 12;
   }, [budgets, period]);
 
+  const budgetTotal = useMemo(() => {
+    return filteredTransactions.reduce((sum, t) => {
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (cat?.excludeFromBudget) return sum;
+      return sum + t.amount;
+    }, 0);
+  }, [filteredTransactions, categories]);
+
   // Total Asset Trend (Past 12 Months)
   const assetTrendData = useMemo(() => {
     const currentTotalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);
@@ -270,7 +295,7 @@ export default function Statistics() {
             <p className="text-xs font-medium text-gray-400 mb-3 px-1">显示模块</p>
             <div className="flex overflow-x-auto pb-2 -mx-4 px-4 space-x-2 scrollbar-hide">
               {METRICS_CONFIG.map(metric => {
-                if (metric.expenseOnly && type !== 'expense') return null;
+                if ('expenseOnly' in metric && metric.expenseOnly && type !== 'expense') return null;
                 const isActive = visibleMetrics[metric.key as keyof typeof visibleMetrics];
                 const Icon = metric.icon;
                 
@@ -347,10 +372,10 @@ export default function Statistics() {
                 <div className="bg-white/10 p-3 rounded-xl backdrop-blur-sm">
                   <p className="text-indigo-100 text-xs mb-1">💰 预算健康度</p>
                   <p className="font-medium">
-                    {total > totalBudget ? (
-                      <span className="text-red-300">已超支 ¥{(total - totalBudget).toFixed(2)}，请注意控制！</span>
+                    {budgetTotal > totalBudget ? (
+                      <span className="text-red-300">已超支 ¥{(budgetTotal - totalBudget).toFixed(2)}，请注意控制！</span>
                     ) : (
-                      <span className="text-emerald-300">预算剩余 ¥{(totalBudget - total).toFixed(2)}，继续保持！</span>
+                      <span className="text-emerald-300">预算剩余 ¥{(totalBudget - budgetTotal).toFixed(2)}，继续保持！</span>
                     )}
                   </p>
                 </div>
@@ -398,6 +423,80 @@ export default function Statistics() {
               </PieChart>
             </ResponsiveContainer>
           </div>
+
+          {/* Daily Average */}
+          {visibleMetrics.dailyAverage && chartData.length > 0 && (
+            <motion.div 
+              key="daily-average"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mt-6"
+            >
+              <div className="flex justify-between items-center mb-4 px-2">
+                <h3 className="text-lg font-bold text-gray-900">日均统计</h3>
+                <div className="text-xs text-gray-500">
+                  {period === 'month' ? '本月' : '本年'}共 {period === 'month' ? new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate() : (isWithinInterval(new Date(), { start, end }) ? Math.ceil((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 365)} 天
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {chartData.map((item, index) => {
+                  const IconComponent = (Icons as any)[item.icon] || Icons.HelpCircle;
+                  const isIncluded = dailyAverageCategories.length === 0 || dailyAverageCategories.includes(item.name);
+                  const days = period === 'month' ? new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate() : (isWithinInterval(new Date(), { start, end }) ? Math.ceil((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 365);
+                  const dailyAvg = item.value / Math.max(1, days);
+                  
+                  return (
+                    <div key={index} className={`flex items-center justify-between p-2 rounded-xl transition-colors ${isIncluded ? 'bg-gray-50' : 'opacity-50 grayscale'}`}>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => {
+                            setDailyAverageCategories(prev => {
+                              if (prev.length === 0) {
+                                // If empty, it means all were included. Now we exclude this one, so we include all others.
+                                return chartData.filter(c => c.name !== item.name).map(c => c.name);
+                              }
+                              if (prev.includes(item.name)) {
+                                const newArr = prev.filter(n => n !== item.name);
+                                return newArr.length === 0 ? ['__NONE__'] : newArr; // Hack to keep it from resetting to all
+                              } else {
+                                const newArr = prev.filter(n => n !== '__NONE__');
+                                return [...newArr, item.name];
+                              }
+                            });
+                          }}
+                          className={`w-5 h-5 rounded flex items-center justify-center border ${isIncluded ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 text-transparent'}`}
+                        >
+                          <Icons.Check size={14} />
+                        </button>
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: item.color }}
+                        >
+                          <IconComponent size={16} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900">¥{dailyAvg.toFixed(2)}<span className="text-xs text-gray-500 font-normal"> /天</span></p>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                <div className="pt-3 mt-3 border-t border-gray-100 flex justify-between items-center px-2">
+                  <span className="font-bold text-gray-900">合计日均</span>
+                  <span className="font-bold text-lg text-emerald-500">
+                    ¥{(chartData.filter(c => dailyAverageCategories.length === 0 || dailyAverageCategories.includes(c.name)).reduce((sum, c) => sum + c.value, 0) / Math.max(1, period === 'month' ? new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate() : (isWithinInterval(new Date(), { start, end }) ? Math.ceil((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) : 365))).toFixed(2)}
+                    <span className="text-sm text-gray-500 font-normal"> /天</span>
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Category List */}
           <div className="mt-4 space-y-3">

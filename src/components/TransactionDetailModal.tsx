@@ -188,17 +188,6 @@ export default function TransactionDetailModal({ transaction, onClose }: { trans
               </div>
             )}
 
-            {transaction.receipt && (
-              <div className="pt-3 mt-3 border-t border-gray-200/60">
-                <div className="flex items-center space-x-2 text-gray-500 mb-2">
-                  <Icons.Image size={18} />
-                  <span className="text-sm">附件</span>
-                </div>
-                <div className="mt-2 rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-                  <img src={transaction.receipt} alt="Receipt" className="w-full h-auto object-contain max-h-64" />
-                </div>
-              </div>
-            )}
           </div>
 
           {transaction.history && transaction.history.length > 0 && (

@@ -45,11 +45,12 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
     let exp = 0;
     let inc = 0;
     currentMonthTransactions.forEach(t => {
-      if (t.type === 'expense') exp += t.amount;
-      if (t.type === 'income') inc += t.amount;
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (t.type === 'expense' && !cat?.excludeFromStats) exp += t.amount;
+      if (t.type === 'income' && !cat?.excludeFromStats) inc += t.amount;
     });
     return { expense: exp, income: inc };
-  }, [currentMonthTransactions]);
+  }, [currentMonthTransactions, categories]);
 
   const dailyAverage = useMemo(() => {
     const currentDay = now.getDate();
@@ -60,12 +61,20 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   
   const { totalBudget, budgetRemaining, budgetPercent } = useMemo(() => {
     const total = budgets.find(b => !b.categoryId)?.amount || 0;
+    const budgetExpense = currentMonthTransactions
+      .filter(t => {
+        if (t.type !== 'expense') return false;
+        const cat = categories.find(c => c.id === t.categoryId);
+        return !cat?.excludeFromBudget;
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+
     return {
       totalBudget: total,
-      budgetRemaining: total - expense,
-      budgetPercent: total > 0 ? (expense / total) * 100 : 0
+      budgetRemaining: total - budgetExpense,
+      budgetPercent: total > 0 ? (budgetExpense / total) * 100 : 0
     };
-  }, [budgets, expense]);
+  }, [budgets, currentMonthTransactions, categories]);
 
   const categoryBudgets = useMemo(() => {
     return budgets.filter(b => b.categoryId).map(b => {

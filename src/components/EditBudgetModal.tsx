@@ -13,7 +13,7 @@ export default function EditBudgetModal({ onClose }: { onClose: () => void }) {
     categoryBudgets.map(b => ({ id: b.id, categoryId: b.categoryId!, amount: Number(b.amount.toFixed(2)).toString() }))
   );
 
-  const expenseCategories = categories.filter(c => c.type === 'expense');
+  const expenseCategories = categories.filter(c => c.type === 'expense' && !c.excludeFromBudget);
 
   const handleAddCategoryBudget = () => {
     if (expenseCategories.length > 0) {

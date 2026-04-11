@@ -118,10 +118,13 @@ service cloud.firestore {
     function isValidAccount(data) {
       return hasRequiredFields(['name', 'type', 'balance', 'color', 'icon', 'userId']) &&
              validStringLength('name', 1, 50) &&
-             data.type in ['bank', 'cash', 'alipay', 'wechat', 'credit'] &&
+             data.type in ['bank', 'cash', 'alipay', 'wechat', 'credit', 'auto_deposit'] &&
              data.balance is number &&
              validStringLength('color', 1, 20) &&
              validStringLength('icon', 1, 50) &&
+             (!( 'isHidden' in data ) || data.isHidden is bool) &&
+             (!( 'autoDepositAmount' in data ) || data.autoDepositAmount is number) &&
+             (!( 'autoDepositDay' in data ) || data.autoDepositDay is number) &&
              data.userId == request.auth.uid;
     }
 
@@ -132,6 +135,8 @@ service cloud.firestore {
              validStringLength('icon', 1, 50) &&
              validStringLength('color', 1, 20) &&
              (!( 'isFixed' in data ) || data.isFixed is bool) &&
+             (!( 'excludeFromBudget' in data ) || data.excludeFromBudget is bool) &&
+             (!( 'excludeFromStats' in data ) || data.excludeFromStats is bool) &&
              data.userId == request.auth.uid;
     }
 

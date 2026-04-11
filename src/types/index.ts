@@ -7,15 +7,20 @@ export interface Category {
   icon: string;
   color: string;
   isFixed?: boolean;
+  excludeFromBudget?: boolean;
+  excludeFromStats?: boolean;
 }
 
 export interface Account {
   id: string;
   name: string;
-  type: 'cash' | 'bank' | 'alipay' | 'wechat' | 'credit';
+  type: 'cash' | 'bank' | 'alipay' | 'wechat' | 'credit' | 'auto_deposit';
   balance: number;
   color: string;
   icon: string;
+  isHidden?: boolean;
+  autoDepositAmount?: number;
+  autoDepositDay?: number;
 }
 
 export interface TransactionHistory {

@@ -6,14 +6,20 @@ import { Account } from '../types';
 export default function EditAccountModal({ account, onClose }: { account: Account, onClose: () => void }) {
   const { updateAccount, deleteAccount } = useStore();
   const [name, setName] = useState(account.name);
-  const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit'>(account.type);
+  const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit' | 'auto_deposit'>(account.type);
   const [balance, setBalance] = useState(Number(account.balance.toFixed(2)).toString());
+  const [isHidden, setIsHidden] = useState(account.isHidden || false);
+  const [autoDepositAmount, setAutoDepositAmount] = useState(account.autoDepositAmount ? account.autoDepositAmount.toString() : '');
+  const [autoDepositDay, setAutoDepositDay] = useState(account.autoDepositDay ? account.autoDepositDay.toString() : '');
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     setName(account.name);
     setType(account.type);
     setBalance(Number(account.balance.toFixed(2)).toString());
+    setIsHidden(account.isHidden || false);
+    setAutoDepositAmount(account.autoDepositAmount ? account.autoDepositAmount.toString() : '');
+    setAutoDepositDay(account.autoDepositDay ? account.autoDepositDay.toString() : '');
     setShowConfirm(false);
   }, [account]);
 
@@ -29,13 +35,17 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
     if (type === 'wechat') { icon = 'MessageCircle'; color = '#22c55e'; }
     if (type === 'credit') { icon = 'CreditCard'; color = '#f59e0b'; }
     if (type === 'bank') { icon = 'Landmark'; color = '#ef4444'; }
+    if (type === 'auto_deposit') { icon = 'PiggyBank'; color = '#8b5cf6'; }
 
     updateAccount(account.id, {
       name,
       type,
       balance: Math.round((Number(balance) || 0) * 100) / 100,
       color,
-      icon
+      icon,
+      isHidden,
+      autoDepositAmount: type === 'auto_deposit' && autoDepositAmount ? Number(autoDepositAmount) : undefined,
+      autoDepositDay: type === 'auto_deposit' && autoDepositDay ? Number(autoDepositDay) : undefined
     });
     onClose();
   };
@@ -80,6 +90,7 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
               <option value="alipay">支付宝</option>
               <option value="wechat">微信</option>
               <option value="credit">信用卡</option>
+              <option value="auto_deposit">自动入账 (如公积金/医保)</option>
             </select>
           </div>
 
@@ -94,6 +105,49 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
             />
           </div>
+
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+            <div>
+              <h4 className="font-medium text-gray-900">折叠账户</h4>
+              <p className="text-xs text-gray-500 mt-0.5">在资产列表中折叠显示此账户</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsHidden(!isHidden)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isHidden ? 'bg-emerald-500' : 'bg-gray-300'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isHidden ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          {type === 'auto_deposit' && (
+            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <h4 className="font-medium text-gray-900">自动入账设置</h4>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">每月入账金额</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  value={autoDepositAmount}
+                  onChange={e => setAutoDepositAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">每月入账日 (1-31)</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  max="31"
+                  value={autoDepositDay}
+                  onChange={e => setAutoDepositDay(e.target.value)}
+                  placeholder="15"
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 space-y-3">
             <button 

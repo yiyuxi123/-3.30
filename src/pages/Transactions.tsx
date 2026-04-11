@@ -16,6 +16,7 @@ export default function Transactions() {
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
   
   // Batch Operations State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -125,6 +126,16 @@ export default function Transactions() {
       return acc;
     }, {} as Record<string, Transaction[]>);
   }, [filteredTransactions]);
+
+  const toggleMonthCollapse = (month: string) => {
+    const newCollapsed = new Set(collapsedMonths);
+    if (newCollapsed.has(month)) {
+      newCollapsed.delete(month);
+    } else {
+      newCollapsed.add(month);
+    }
+    setCollapsedMonths(newCollapsed);
+  };
 
   return (
     <div className="p-4 space-y-6 max-w-md mx-auto">
@@ -273,8 +284,17 @@ export default function Transactions() {
                   className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
                 >
                   {/* Month Header */}
-                  <div className="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-100">
-                    <h3 className="font-bold text-gray-900">{format(parseISO(`${month}-01`), 'yyyy年MM月')}</h3>
+                  <div 
+                    className="bg-gray-50 px-4 py-3 flex justify-between items-center border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+                    onClick={() => toggleMonthCollapse(month)}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Icons.ChevronDown 
+                        size={16} 
+                        className={`text-gray-400 transition-transform ${collapsedMonths.has(month) ? '-rotate-90' : ''}`} 
+                      />
+                      <h3 className="font-bold text-gray-900">{format(parseISO(`${month}-01`), 'yyyy年MM月')}</h3>
+                    </div>
                     <div className="text-xs text-gray-500 flex space-x-3">
                       <span>支 ¥{monthExpense.toFixed(2)}</span>
                       <span>收 ¥{monthIncome.toFixed(2)}</span>
@@ -282,14 +302,21 @@ export default function Transactions() {
                   </div>
 
                   {/* Items */}
-                  <div className="divide-y divide-gray-50">
-                    {monthTransactions.map(t => {
-                      const category = categories.find(c => c.id === t.categoryId);
-                      const IconComponent = category ? (Icons as any)[category.icon] : Icons.ArrowRightLeft;
-                      const fromAccount = accounts.find(a => a.id === t.fromAccountId);
-                      const toAccount = accounts.find(a => a.id === t.toAccountId);
-                      
-                      return (
+                  <AnimatePresence>
+                    {!collapsedMonths.has(month) && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="divide-y divide-gray-50 overflow-hidden"
+                      >
+                        {monthTransactions.map(t => {
+                          const category = categories.find(c => c.id === t.categoryId);
+                          const IconComponent = category ? (Icons as any)[category.icon] : Icons.ArrowRightLeft;
+                          const fromAccount = accounts.find(a => a.id === t.fromAccountId);
+                          const toAccount = accounts.find(a => a.id === t.toAccountId);
+                          
+                          return (
                         <motion.div 
                           whileHover={{ backgroundColor: '#f9fafb' }}
                           whileTap={isSelectionMode ? undefined : { scale: 0.98 }}
@@ -359,7 +386,9 @@ export default function Transactions() {
                         </motion.div>
                       );
                     })}
-                  </div>
+                  </motion.div>
+                  )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })
