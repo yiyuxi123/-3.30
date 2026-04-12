@@ -1,12 +1,53 @@
-import React from 'react';
-import { X, Cloud, HardDrive, RefreshCw, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Cloud, HardDrive, RefreshCw, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const { syncSettings, setSyncSettings, syncToCloudNow, pullFromCloud } = useStore();
+  const [showConfirmSwitch, setShowConfirmSwitch] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleManualSync = async () => {
-    await syncToCloudNow();
+  const showMessage = (type: 'success' | 'error', text: string) => {
+    setSyncMessage({ type, text });
+    setTimeout(() => setSyncMessage(null), 3000);
+  };
+
+  const handleManualPush = async () => {
+    setIsSyncing(true);
+    try {
+      await syncToCloudNow();
+      showMessage('success', '成功推送到云端！');
+    } catch (e) {
+      showMessage('error', '推送到云端失败，请检查网络。');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleManualPull = async () => {
+    setIsSyncing(true);
+    try {
+      await pullFromCloud();
+      showMessage('success', '成功从云端拉取！');
+    } catch (e) {
+      showMessage('error', '从云端拉取失败，请检查网络。');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleSwitchToCloud = () => {
+    if (syncSettings.storageMode === 'local') {
+      setShowConfirmSwitch(true);
+    } else {
+      setSyncSettings({ storageMode: 'cloud' });
+    }
+  };
+
+  const confirmSwitchToCloud = () => {
+    setSyncSettings({ storageMode: 'cloud' });
+    setShowConfirmSwitch(false);
   };
 
   return (
@@ -19,21 +60,23 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-8">
+        <div className="p-6 space-y-8 relative">
+          {/* Sync Message Toast */}
+          {syncMessage && (
+            <div className={`absolute top-0 left-0 right-0 mx-6 mt-2 p-3 rounded-xl flex items-center justify-center space-x-2 text-sm font-medium animate-in fade-in slide-in-from-top-4 ${
+              syncMessage.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {syncMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+              <span>{syncMessage.text}</span>
+            </div>
+          )}
+
           {/* Storage Mode */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">数据存储位置</h3>
             <div className="grid grid-cols-2 gap-3">
               <button
-                onClick={() => {
-                  if (syncSettings.storageMode === 'local') {
-                    if (window.confirm('切换到云端同步可能会覆盖您在本地未同步的数据。建议先导出备份。是否继续？')) {
-                      setSyncSettings({ storageMode: 'cloud' });
-                    }
-                  } else {
-                    setSyncSettings({ storageMode: 'cloud' });
-                  }
-                }}
+                onClick={handleSwitchToCloud}
                 className={`p-4 rounded-2xl border-2 flex flex-col items-center justify-center space-y-2 transition-all ${
                   syncSettings.storageMode === 'cloud' 
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
@@ -104,21 +147,20 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">手动云端同步</h3>
               <div className="flex space-x-3">
                 <button
-                  onClick={async () => {
-                    await pullFromCloud();
-                    alert('从云端拉取成功！');
-                  }}
-                  className="flex-1 py-4 bg-blue-500 text-white rounded-xl font-bold shadow-md hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2"
+                  onClick={handleManualPull}
+                  disabled={isSyncing}
+                  className="flex-1 py-4 bg-blue-500 text-white rounded-xl font-bold shadow-md hover:bg-blue-600 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
                 >
                   <Cloud size={20} />
-                  <span>从云端拉取</span>
+                  <span>{isSyncing ? '同步中...' : '从云端拉取'}</span>
                 </button>
                 <button
-                  onClick={handleManualSync}
-                  className="flex-1 py-4 bg-emerald-500 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 transition-colors flex items-center justify-center space-x-2"
+                  onClick={handleManualPush}
+                  disabled={isSyncing}
+                  className="flex-1 py-4 bg-emerald-500 text-white rounded-xl font-bold shadow-md hover:bg-emerald-600 disabled:opacity-50 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <RefreshCw size={20} />
-                  <span>推送到云端</span>
+                  <RefreshCw size={20} className={isSyncing ? 'animate-spin' : ''} />
+                  <span>{isSyncing ? '同步中...' : '推送到云端'}</span>
                 </button>
               </div>
               {syncSettings.storageMode === 'local' && (
@@ -130,6 +172,35 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmSwitch && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 text-orange-500 mb-4 mx-auto">
+              <AlertCircle size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-center text-gray-900 mb-2">切换到云端同步</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              切换到云端同步可能会覆盖您在本地未同步的数据。建议您先进行数据备份。是否继续切换？
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowConfirmSwitch(false)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmSwitchToCloud}
+                className="flex-1 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors"
+              >
+                确认切换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

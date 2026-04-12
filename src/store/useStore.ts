@@ -436,15 +436,14 @@ export const useStore = create<AppState>()(
             await batch.commit();
 
             set({ syncSettings: { ...state.syncSettings, lastSyncTime: Date.now() } });
-            alert('同步成功！');
           } catch (e) {
             console.error(e);
-            alert('同步失败');
+            throw e;
           }
         },
         pullFromCloud: async () => {
           const userId = auth.currentUser?.uid;
-          if (!userId) return;
+          if (!userId) throw new Error("Not logged in");
           
           try {
             const [accSnap, catSnap, txSnap, budSnap, tplSnap, goalSnap] = await Promise.all([
@@ -467,6 +466,7 @@ export const useStore = create<AppState>()(
             });
           } catch (e) {
             console.error("Pull from cloud failed", e);
+            throw e;
           }
         }
       };
