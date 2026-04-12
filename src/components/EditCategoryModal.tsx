@@ -25,7 +25,7 @@ export default function EditCategoryModal({
   defaultType: 'expense' | 'income',
   onClose: () => void 
 }) {
-  const { addCategory, updateCategory, deleteCategory } = useStore();
+  const { addCategory, updateCategory, deleteCategory, categories } = useStore();
   const [name, setName] = useState(category?.name || '');
   const [color, setColor] = useState(category?.color || COLORS[0]);
   const [icon, setIcon] = useState(category?.icon || AVAILABLE_ICONS[0]);
@@ -39,6 +39,14 @@ export default function EditCategoryModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
+
+    if (isNew && categories.some(c => c.name === name && c.type === defaultType)) {
+      alert('已存在同名分类，请更换名称');
+      return;
+    } else if (!isNew && categories.some(c => c.name === name && c.type === defaultType && c.id !== category?.id)) {
+      alert('已存在同名分类，请更换名称');
+      return;
+    }
 
     if (isNew) {
       addCategory({ name, type: defaultType, color, icon, isFixed, excludeFromBudget, excludeFromStats });
@@ -56,6 +64,14 @@ export default function EditCategoryModal({
   };
 
   const SelectedIcon = (Icons as any)[icon] || Icons.HelpCircle;
+
+  const currentIcons = React.useMemo(() => {
+    const icons = [...AVAILABLE_ICONS];
+    if (category?.icon && !icons.includes(category.icon)) {
+      icons.unshift(category.icon);
+    }
+    return icons;
+  }, [category?.icon]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm transition-opacity">
@@ -113,8 +129,8 @@ export default function EditCategoryModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">选择图标</label>
               <div className="grid grid-cols-5 gap-3">
-                {AVAILABLE_ICONS.map(i => {
-                  const IconComp = (Icons as any)[i];
+                {currentIcons.map(i => {
+                  const IconComp = (Icons as any)[i] || Icons.HelpCircle;
                   const isSelected = icon === i;
                   return (
                     <button

@@ -3,20 +3,192 @@ import { useStore } from '../store/useStore';
 import { Plus, Wallet, CreditCard, Smartphone, MessageCircle, Banknote, Download } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { motion } from 'motion/react';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import AddAccountModal from '../components/AddAccountModal';
 import EditAccountModal from '../components/EditAccountModal';
 import CategoryManagementModal from '../components/CategoryManagementModal';
 import GoalModal from '../components/GoalModal';
+import SettingsModal from '../components/SettingsModal';
 import { Account, SavingGoal } from '../types';
 import { format, parseISO } from 'date-fns';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableAccountItem: React.FC<{ account: Account, isReordering: boolean, onClick: () => void, index: number, total: number }> = ({ account, isReordering, onClick, index, total }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: account.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
+  const typeLabels: Record<string, string> = {
+    'cash': '现金',
+    'bank': '银行卡',
+    'alipay': '支付宝',
+    'wechat': '微信',
+    'credit': '信用卡',
+    'auto_deposit': '自动入账'
+  };
+
+  return (
+    <motion.div 
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+      whileTap={{ scale: 0.98 }}
+      className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all ${isReordering ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+      onClick={onClick}
+      {...(isReordering ? { ...attributes, ...listeners } : {})}
+    >
+      <div className="flex items-center space-x-4">
+        {isReordering && (
+          <div className="mr-2 text-gray-400">
+            <Icons.GripVertical size={20} />
+          </div>
+        )}
+        <div 
+          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner"
+          style={{ backgroundColor: account.color }}
+        >
+          <IconComponent size={24} />
+        </div>
+        <div>
+          <h4 className="font-bold text-gray-900">{account.name}</h4>
+          <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+          ¥{account.balance.toFixed(2)}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+const SortableHiddenAccountItem: React.FC<{ account: Account, isReordering: boolean, onClick: () => void, index: number, total: number }> = ({ account, isReordering, onClick, index, total }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: account.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
+  const typeLabels: Record<string, string> = {
+    'cash': '现金',
+    'bank': '银行卡',
+    'alipay': '支付宝',
+    'wechat': '微信',
+    'credit': '信用卡',
+    'auto_deposit': '自动入账'
+  };
+
+  return (
+    <motion.div 
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+      whileTap={{ scale: 0.98 }}
+      className={`bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all opacity-75 hover:opacity-100 ${isReordering ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+      onClick={onClick}
+      {...(isReordering ? { ...attributes, ...listeners } : {})}
+    >
+      <div className="flex items-center space-x-4">
+        {isReordering && (
+          <div className="mr-2 text-gray-400">
+            <Icons.GripVertical size={20} />
+          </div>
+        )}
+        <div 
+          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner grayscale"
+          style={{ backgroundColor: account.color }}
+        >
+          <IconComponent size={24} />
+        </div>
+        <div>
+          <h4 className="font-bold text-gray-900">{account.name}</h4>
+          <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+          ¥{account.balance.toFixed(2)}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Accounts() {
-  const { accounts, transactions, categories } = useStore();
+  const { accounts, transactions, categories, reorderAccount, reorderAccountsList } = useStore();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<SavingGoal | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const oldIndex = accounts.findIndex((acc) => acc.id === active.id);
+      const newIndex = accounts.findIndex((acc) => acc.id === over.id);
+      
+      const newAccounts = arrayMove(accounts, oldIndex, newIndex);
+      reorderAccountsList(newAccounts);
+    }
+  };
 
   const { totalBalance, totalAssets, totalLiabilities } = useMemo(() => {
     let balance = 0;
@@ -30,16 +202,39 @@ export default function Accounts() {
     return { totalBalance: balance, totalAssets: assets, totalLiabilities: liabilities };
   }, [accounts]);
 
-  const exportToCSV = (filename: string, rows: string[][]) => {
+  const exportToCSV = async (filename: string, rows: string[][]) => {
     const csvContent = rows.map(e => e.join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const content = "\uFEFF" + csvContent;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.writeFile({
+          path: filename,
+          data: content,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+        });
+        
+        await Share.share({
+          title: '导出数据',
+          text: '这是您的记账数据导出文件',
+          url: result.uri,
+          dialogTitle: '分享或保存CSV文件',
+        });
+      } catch (e) {
+        console.error('Export failed', e);
+        alert('导出失败: ' + (e as Error).message + '\n文件可能已保存到Documents文件夹。');
+      }
+    } else {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const escapeCSV = (str: string | undefined) => `"${String(str || '').replace(/"/g, '""')}"`;
@@ -81,7 +276,7 @@ export default function Accounts() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearConfirm2, setShowClearConfirm2] = useState(false);
 
-  const handleBackup = () => {
+  const handleBackup = async () => {
     const data = {
       accounts,
       transactions,
@@ -89,14 +284,38 @@ export default function Accounts() {
       version: 1,
       timestamp: new Date().toISOString()
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `money_tracker_backup_${format(new Date(), 'yyyyMMdd_HHmmss')}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const content = JSON.stringify(data, null, 2);
+    const filename = `money_tracker_backup_${format(new Date(), 'yyyyMMdd_HHmmss')}.json`;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.writeFile({
+          path: filename,
+          data: content,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+        });
+        
+        await Share.share({
+          title: '备份数据',
+          text: '这是您的记账数据备份文件',
+          url: result.uri,
+          dialogTitle: '分享或保存备份文件',
+        });
+      } catch (e) {
+        console.error('Backup failed', e);
+        alert('备份失败: ' + (e as Error).message + '\n文件可能已保存到Documents文件夹。');
+      }
+    } else {
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,109 +410,67 @@ export default function Accounts() {
 
       {/* Accounts List */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold text-gray-900">我的账户</h3>
-        
-        <div className="grid grid-cols-1 gap-3">
-          {accounts.filter(a => !a.isHidden).map((account, index) => {
-            const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
-            
-            const typeLabels: Record<string, string> = {
-              'cash': '现金',
-              'bank': '银行卡',
-              'alipay': '支付宝',
-              'wechat': '微信',
-              'credit': '信用卡',
-              'auto_deposit': '自动入账'
-            };
-            
-            return (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
-                whileTap={{ scale: 0.98 }}
-                key={account.id} 
-                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer transition-all"
-                onClick={() => setSelectedAccount(account)}
-              >
-                <div className="flex items-center space-x-4">
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner"
-                    style={{ backgroundColor: account.color }}
-                  >
-                    <IconComponent size={24} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">{account.name}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                    ¥{account.balance.toFixed(2)}
-                  </p>
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-bold text-gray-900">我的账户</h3>
+          <button 
+            onClick={() => setIsReordering(!isReordering)}
+            className={`text-sm font-medium px-3 py-1 rounded-full transition-colors ${isReordering ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:bg-gray-100'}`}
+          >
+            {isReordering ? '完成排序' : '排序'}
+          </button>
         </div>
-
-        {accounts.some(a => a.isHidden) && (
-          <div className="pt-2">
-            <details className="group">
-              <summary className="flex items-center justify-between cursor-pointer list-none text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors py-2">
-                <span>折叠的账户 ({accounts.filter(a => a.isHidden).length})</span>
-                <Icons.ChevronDown size={16} className="transition-transform group-open:-rotate-180" />
-              </summary>
-              <div className="grid grid-cols-1 gap-3 mt-3">
-                {accounts.filter(a => a.isHidden).map((account, index) => {
-                  const IconComponent = (Icons as any)[account.icon] || Icons.Wallet;
-                  
-                  const typeLabels: Record<string, string> = {
-                    'cash': '现金',
-                    'bank': '银行卡',
-                    'alipay': '支付宝',
-                    'wechat': '微信',
-                    'credit': '信用卡',
-                    'auto_deposit': '自动入账'
-                  };
-                  
-                  return (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
-                      whileTap={{ scale: 0.98 }}
-                      key={account.id} 
-                      className="bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer transition-all opacity-75 hover:opacity-100"
-                      onClick={() => setSelectedAccount(account)}
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div 
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner grayscale"
-                          style={{ backgroundColor: account.color }}
-                        >
-                          <IconComponent size={24} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-gray-900">{account.name}</h4>
-                          <p className="text-xs text-gray-500 mt-0.5">{typeLabels[account.type] || account.type}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold text-lg ${account.balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                          ¥{account.balance.toFixed(2)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </details>
+        
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <SortableContext 
+              items={accounts.filter(a => !a.isHidden).map(a => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {accounts.filter(a => !a.isHidden).map((account, index, arr) => (
+                <SortableAccountItem 
+                  key={account.id}
+                  account={account}
+                  isReordering={isReordering}
+                  onClick={() => !isReordering && setSelectedAccount(account)}
+                  index={index}
+                  total={arr.length}
+                />
+              ))}
+            </SortableContext>
           </div>
-        )}
+
+          {accounts.some(a => a.isHidden) && (
+            <div className="pt-2">
+              <details className="group">
+                <summary className="flex items-center justify-between cursor-pointer list-none text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors py-2">
+                  <span>折叠的账户 ({accounts.filter(a => a.isHidden).length})</span>
+                  <Icons.ChevronDown size={16} className="transition-transform group-open:-rotate-180" />
+                </summary>
+                <div className="grid grid-cols-1 gap-3 mt-3 p-1">
+                  <SortableContext 
+                    items={accounts.filter(a => a.isHidden).map(a => a.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {accounts.filter(a => a.isHidden).map((account, index, arr) => (
+                      <SortableHiddenAccountItem 
+                        key={account.id}
+                        account={account}
+                        isReordering={isReordering}
+                        onClick={() => !isReordering && setSelectedAccount(account)}
+                        index={index}
+                        total={arr.length}
+                      />
+                    ))}
+                  </SortableContext>
+                </div>
+              </details>
+            </div>
+          )}
+        </DndContext>
       </div>
 
       {/* Goals List */}
@@ -467,6 +644,15 @@ export default function Accounts() {
           <motion.button 
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setIsSettingsOpen(true)}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
+          >
+            <Icons.Settings size={24} className="text-slate-500" />
+            <span className="text-sm font-medium">同步设置</span>
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => {
               import('../firebase').then(({ logout }) => logout());
             }}
@@ -483,6 +669,7 @@ export default function Accounts() {
       {selectedAccount && <EditAccountModal account={selectedAccount} onClose={() => setSelectedAccount(null)} />}
       <GoalModal isOpen={isAddGoalOpen} onClose={() => setIsAddGoalOpen(false)} />
       <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
+      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
 
       {/* Restore Confirm Modal */}
       {showRestoreConfirm && (

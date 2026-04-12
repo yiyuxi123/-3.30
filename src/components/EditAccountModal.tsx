@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { Account } from '../types';
 
 export default function EditAccountModal({ account, onClose }: { account: Account, onClose: () => void }) {
-  const { updateAccount, deleteAccount } = useStore();
+  const { updateAccount, deleteAccount, accounts } = useStore();
   const [name, setName] = useState(account.name);
   const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit' | 'auto_deposit'>(account.type);
   const [balance, setBalance] = useState(Number(account.balance.toFixed(2)).toString());
@@ -26,6 +26,11 @@ export default function EditAccountModal({ account, onClose }: { account: Accoun
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
+
+    if (accounts.some(a => a.name === name && a.id !== account.id)) {
+      alert('已存在同名账户，请更换名称');
+      return;
+    }
 
     let icon = 'CreditCard';
     let color = '#3b82f6';

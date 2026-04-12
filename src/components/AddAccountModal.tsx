@@ -3,7 +3,7 @@ import { X, Check } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export default function AddAccountModal({ onClose }: { onClose: () => void }) {
-  const { addAccount } = useStore();
+  const { addAccount, accounts } = useStore();
   const [name, setName] = useState('');
   const [type, setType] = useState<'cash' | 'bank' | 'alipay' | 'wechat' | 'credit' | 'auto_deposit'>('bank');
   const [balance, setBalance] = useState('');
@@ -13,6 +13,11 @@ export default function AddAccountModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
+
+    if (accounts.some(a => a.name === name)) {
+      alert('已存在同名账户，请更换名称');
+      return;
+    }
 
     let icon = 'CreditCard';
     let color = '#3b82f6';

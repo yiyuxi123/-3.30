@@ -9,6 +9,7 @@ export interface Category {
   isFixed?: boolean;
   excludeFromBudget?: boolean;
   excludeFromStats?: boolean;
+  order?: number;
 }
 
 export interface Account {
@@ -21,6 +22,13 @@ export interface Account {
   isHidden?: boolean;
   autoDepositAmount?: number;
   autoDepositDay?: number;
+  order?: number;
+}
+
+export interface SyncSettings {
+  storageMode: 'local' | 'cloud';
+  syncFrequency: 'realtime' | 'daily';
+  lastSyncTime: number;
 }
 
 export interface TransactionHistory {

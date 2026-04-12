@@ -29,13 +29,24 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
 
-  const { setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals } = useStore();
+  const { setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals, syncSettings, syncToCloudNow } = useStore();
+
+  useEffect(() => {
+    if (user && syncSettings.storageMode === 'cloud' && syncSettings.syncFrequency === 'daily') {
+      const now = Date.now();
+      const lastSync = syncSettings.lastSyncTime || 0;
+      const oneDay = 24 * 60 * 60 * 1000;
+      if (now - lastSync > oneDay) {
+        syncToCloudNow().catch(console.error);
+      }
+    }
+  }, [user, syncSettings.storageMode, syncSettings.syncFrequency, syncSettings.lastSyncTime, syncToCloudNow]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
-      if (currentUser) {
+      if (currentUser && syncSettings.storageMode === 'cloud') {
         // Check if new user and bootstrap
         const userId = currentUser.uid;
         if (!isInitializing) {
@@ -44,13 +55,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const categoriesSnap = await getDocs(collection(db, `users/${userId}/categories`));
             if (categoriesSnap.empty) {
               const batch = writeBatch(db);
-              initialCategories.forEach(cat => {
+              initialCategories.forEach((cat, index) => {
                 const id = uuidv4();
-                batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId });
+                batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId, order: index });
               });
-              initialAccounts.forEach(acc => {
+              initialAccounts.forEach((acc, index) => {
                 const id = uuidv4();
-                batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId });
+                batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId, order: index });
               });
               batch.set(doc(db, `users/${userId}/budgets`, uuidv4()), { amount: 5000, period: 'monthly', userId });
               await batch.commit();
@@ -65,10 +76,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setIsAuthReady(true);
     });
     return () => unsubscribe();
-  }, []);
+  }, [syncSettings.storageMode]);
 
   useEffect(() => {
     if (!isAuthReady || !user) return;
+    if (syncSettings.storageMode === 'local') return;
+    if (syncSettings.syncFrequency !== 'realtime') return;
 
     const userId = user.uid;
 
@@ -104,7 +117,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubTemplates();
       unsubGoals();
     };
-  }, [isAuthReady, user, setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals]);
+  }, [isAuthReady, user, setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals, syncSettings.storageMode, syncSettings.syncFrequency]);
 
   if (!isAuthReady) {
     return (
