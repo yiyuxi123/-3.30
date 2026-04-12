@@ -7,6 +7,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import TransactionDetailModal from '../components/TransactionDetailModal';
 import TransactionCalendar from '../components/TransactionCalendar';
 import { Transaction } from '../types';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 export default function Transactions() {
   const { transactions, categories, accounts, showReimbursables, toggleShowReimbursables } = useStore();
@@ -88,7 +91,7 @@ export default function Transactions() {
 
   const escapeCSV = (str: string | undefined) => `"${String(str || '').replace(/"/g, '""')}"`;
 
-  const handleExportFiltered = () => {
+  const handleExportFiltered = async () => {
     const headers = ['交易ID', '类型', '金额', '日期', '分类', '付款账户', '收款账户', '备注', '标签'];
     const rows = filteredTransactions.map(t => {
       const category = categories.find(c => c.id === t.categoryId)?.name || '';
@@ -107,14 +110,38 @@ export default function Transactions() {
       ];
     });
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `transactions_filtered_${format(new Date(), 'yyyyMMdd')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const content = "\uFEFF" + csvContent;
+    const filename = `transactions_filtered_${format(new Date(), 'yyyyMMdd')}.csv`;
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.writeFile({
+          path: filename,
+          data: content,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+        });
+        
+        await Share.share({
+          title: '导出筛选结果',
+          text: '这是您的记账数据导出文件',
+          url: result.uri,
+          dialogTitle: '分享或保存CSV文件',
+        });
+      } catch (e) {
+        console.error('Export failed', e);
+        alert('导出失败: ' + (e as Error).message + '\n文件可能已保存到Documents文件夹。');
+      }
+    } else {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Group by month

@@ -56,15 +56,10 @@ const SortableAccountItem: React.FC<{ account: Account, isReordering: boolean, o
   };
 
   return (
-    <motion.div 
+    <div 
       ref={setNodeRef}
       style={style}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
-      whileTap={{ scale: 0.98 }}
-      className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
+      className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-shadow hover:shadow-md ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
       onClick={onClick}
       {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
@@ -90,7 +85,7 @@ const SortableAccountItem: React.FC<{ account: Account, isReordering: boolean, o
           ¥{account.balance.toFixed(2)}
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -119,15 +114,10 @@ const SortableHiddenAccountItem: React.FC<{ account: Account, isReordering: bool
   };
 
   return (
-    <motion.div 
+    <div 
       ref={setNodeRef}
       style={style}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
-      whileTap={{ scale: 0.98 }}
-      className={`bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all opacity-75 hover:opacity-100 ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
+      className={`bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all opacity-75 hover:opacity-100 hover:shadow-md ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
       onClick={onClick}
       {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
@@ -153,7 +143,7 @@ const SortableHiddenAccountItem: React.FC<{ account: Account, isReordering: bool
           ¥{account.balance.toFixed(2)}
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
