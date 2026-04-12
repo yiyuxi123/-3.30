@@ -28,7 +28,7 @@ export default function EditCategoryModal({
   const { addCategory, updateCategory, deleteCategory, categories } = useStore();
   const [name, setName] = useState(category?.name || '');
   const [color, setColor] = useState(category?.color || COLORS[0]);
-  const [icon, setIcon] = useState(category?.icon || AVAILABLE_ICONS[0]);
+  const [icon, setIcon] = useState(category ? (category.icon || 'HelpCircle') : AVAILABLE_ICONS[0]);
   const [isFixed, setIsFixed] = useState(category?.isFixed || false);
   const [excludeFromBudget, setExcludeFromBudget] = useState(category?.excludeFromBudget || false);
   const [excludeFromStats, setExcludeFromStats] = useState(category?.excludeFromStats || false);
@@ -67,11 +67,12 @@ export default function EditCategoryModal({
 
   const currentIcons = React.useMemo(() => {
     const icons = [...AVAILABLE_ICONS];
-    if (category?.icon && !icons.includes(category.icon)) {
-      icons.unshift(category.icon);
+    const currentIcon = category ? (category.icon || 'HelpCircle') : null;
+    if (currentIcon && !icons.includes(currentIcon)) {
+      icons.unshift(currentIcon);
     }
     return icons;
-  }, [category?.icon]);
+  }, [category]);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm transition-opacity">

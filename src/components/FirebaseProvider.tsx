@@ -54,18 +54,31 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           try {
             const categoriesSnap = await getDocs(collection(db, `users/${userId}/categories`));
             if (categoriesSnap.empty) {
-              const batch = writeBatch(db);
-              initialCategories.forEach((cat, index) => {
-                const id = uuidv4();
-                batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId, order: index });
-              });
-              initialAccounts.forEach((acc, index) => {
-                const id = uuidv4();
-                batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId, order: index });
-              });
-              batch.set(doc(db, `users/${userId}/budgets`, uuidv4()), { amount: 5000, period: 'monthly', userId });
-              await batch.commit();
+              const localCategories = useStore.getState().categories;
+              const localAccounts = useStore.getState().accounts;
+              const hasBootstrapped = useStore.getState().hasBootstrapped;
+              
+              if (localCategories.length > 0 || localAccounts.length > 0) {
+                // If user already has local data but cloud is empty, push local data to cloud
+                await useStore.getState().syncToCloudNow();
+              } else if (!hasBootstrapped) {
+                // Bootstrap default data
+                const batch = writeBatch(db);
+                initialCategories.forEach((cat, index) => {
+                  const id = uuidv4();
+                  batch.set(doc(db, `users/${userId}/categories`, id), { ...cat, id, userId, order: index });
+                });
+                initialAccounts.forEach((acc, index) => {
+                  const id = uuidv4();
+                  batch.set(doc(db, `users/${userId}/accounts`, id), { ...acc, id, userId, order: index });
+                });
+                batch.set(doc(db, `users/${userId}/budgets`, uuidv4()), { amount: 5000, period: 'monthly', userId });
+                await batch.commit();
+                useStore.getState().setHasBootstrapped(true);
+              }
             }
+          } catch (error) {
+            console.error("Error during initialization:", error);
           } finally {
             // Keep it true for a short time to prevent immediate re-runs in strict mode
             setTimeout(() => { isInitializing = false; }, 2000);

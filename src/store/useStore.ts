@@ -34,6 +34,9 @@ interface AppState {
   showReimbursables: boolean;
   toggleShowReimbursables: () => void;
 
+  hasBootstrapped: boolean;
+  setHasBootstrapped: (val: boolean) => void;
+
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
@@ -102,6 +105,9 @@ export const useStore = create<AppState>()(
           syncFrequency: 'realtime',
           lastSyncTime: 0
         },
+
+        hasBootstrapped: false,
+        setHasBootstrapped: (val) => set({ hasBootstrapped: val }),
 
         setSyncSettings: (settings) => set((state) => ({ syncSettings: { ...state.syncSettings, ...settings } })),
         toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
@@ -482,7 +488,8 @@ export const useStore = create<AppState>()(
         templates: state.templates,
         goals: state.goals,
         syncSettings: state.syncSettings,
-        showReimbursables: state.showReimbursables
+        showReimbursables: state.showReimbursables,
+        hasBootstrapped: state.hasBootstrapped
       }),
     }
   )

@@ -43,7 +43,7 @@ const SortableCategoryItem: React.FC<{ category: Category, isReordering: boolean
       ref={setNodeRef}
       style={style}
       onClick={onClick}
-      className={`flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${isReordering ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+      className={`flex items-center justify-between p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
       {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
       <div className="flex items-center space-x-4">

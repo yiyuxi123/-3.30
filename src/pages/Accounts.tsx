@@ -64,7 +64,7 @@ const SortableAccountItem: React.FC<{ account: Account, isReordering: boolean, o
       transition={{ delay: index * 0.05 }}
       whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
       whileTap={{ scale: 0.98 }}
-      className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all ${isReordering ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+      className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
       onClick={onClick}
       {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
@@ -75,7 +75,7 @@ const SortableAccountItem: React.FC<{ account: Account, isReordering: boolean, o
           </div>
         )}
         <div 
-          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner flex-shrink-0"
           style={{ backgroundColor: account.color }}
         >
           <IconComponent size={24} />
@@ -127,7 +127,7 @@ const SortableHiddenAccountItem: React.FC<{ account: Account, isReordering: bool
       transition={{ delay: index * 0.05 }}
       whileHover={{ scale: 1.02, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
       whileTap={{ scale: 0.98 }}
-      className={`bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all opacity-75 hover:opacity-100 ${isReordering ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+      className={`bg-white/60 p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between transition-all opacity-75 hover:opacity-100 ${isReordering ? 'cursor-grab active:cursor-grabbing select-none touch-none' : 'cursor-pointer'}`}
       onClick={onClick}
       {...(isReordering ? { ...attributes, ...listeners } : {})}
     >
@@ -138,7 +138,7 @@ const SortableHiddenAccountItem: React.FC<{ account: Account, isReordering: bool
           </div>
         )}
         <div 
-          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner grayscale"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-inner grayscale flex-shrink-0"
           style={{ backgroundColor: account.color }}
         >
           <IconComponent size={24} />

@@ -12,9 +12,32 @@ import { useStore } from './store/useStore';
 function AppContent() {
   const [activeTab, setActiveTab] = useState('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const { accounts, transactions, addTransaction, categories } = useStore();
+  const { accounts, transactions, addTransaction, categories, hasBootstrapped, setHasBootstrapped } = useStore();
 
   useEffect(() => {
+    // Bootstrap local data if empty
+    if (!hasBootstrapped && accounts.length === 0 && categories.length === 0) {
+      const initialCategories = [
+        { id: 'cat-1', name: '餐饮', type: 'expense', icon: 'Utensils', color: '#f59e0b', order: 0 },
+        { id: 'cat-2', name: '交通', type: 'expense', icon: 'Bus', color: '#3b82f6', order: 1 },
+        { id: 'cat-3', name: '购物', type: 'expense', icon: 'ShoppingBag', color: '#ec4899', order: 2 },
+        { id: 'cat-4', name: '居住', type: 'expense', icon: 'Home', color: '#10b981', order: 3 },
+        { id: 'cat-5', name: '工资', type: 'income', icon: 'Wallet', color: '#10b981', order: 4 },
+        { id: 'cat-6', name: '理财', type: 'income', icon: 'TrendingUp', color: '#8b5cf6', order: 5 },
+        { id: 'cat-7', name: '报销款', type: 'income', icon: 'Receipt', color: '#f59e0b', order: 6 },
+      ];
+      const initialAccounts = [
+        { id: 'acc-1', name: '现金', type: 'cash', balance: 1000, color: '#10b981', icon: 'Banknote', order: 0 },
+        { id: 'acc-2', name: '支付宝', type: 'alipay', balance: 5000, color: '#3b82f6', icon: 'Smartphone', order: 1 },
+        { id: 'acc-3', name: '微信', type: 'wechat', balance: 3000, color: '#22c55e', icon: 'MessageCircle', order: 2 },
+        { id: 'acc-4', name: '招商银行', type: 'bank', balance: 20000, color: '#ef4444', icon: 'CreditCard', order: 3 },
+      ];
+      useStore.getState().setCategories(initialCategories as any);
+      useStore.getState().setAccounts(initialAccounts as any);
+      useStore.getState().setBudgets([{ id: 'bud-1', amount: 5000, period: 'monthly' } as any]);
+      setHasBootstrapped(true);
+    }
+
     // Check for auto-deposits
     const today = new Date();
     const currentMonth = today.getMonth();
