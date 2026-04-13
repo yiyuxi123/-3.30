@@ -12,6 +12,7 @@ import CategoryManagementModal from '../components/CategoryManagementModal';
 import GoalModal from '../components/GoalModal';
 import SettingsModal from '../components/SettingsModal';
 import DonationModal from '../components/DonationModal';
+import GuideModal from '../components/GuideModal';
 import { Account, SavingGoal } from '../types';
 import { format, parseISO } from 'date-fns';
 import { auth } from '../firebase';
@@ -159,6 +160,7 @@ export default function Accounts() {
   const [isReordering, setIsReordering] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDonationOpen, setIsDonationOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -637,6 +639,15 @@ export default function Accounts() {
           <motion.button 
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => setIsGuideOpen(true)}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2 transition-all text-emerald-600 hover:bg-emerald-50"
+          >
+            <Icons.BookOpen size={24} className="text-emerald-500" />
+            <span className="text-sm font-medium">使用说明</span>
+          </motion.button>
+          <motion.button 
+            whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setIsSettingsOpen(true)}
             className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700"
           >
@@ -690,6 +701,7 @@ export default function Accounts() {
       <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       {isDonationOpen && <DonationModal onClose={() => setIsDonationOpen(false)} />}
+      {isGuideOpen && <GuideModal onClose={() => setIsGuideOpen(false)} />}
 
       {/* Restore Confirm Modal */}
       {showRestoreConfirm && (

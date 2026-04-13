@@ -31,6 +31,34 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const { isGuestMode, setIsGuestMode, setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals, syncSettings, syncToCloudNow } = useStore();
 
+  const [isCheckingNetwork, setIsCheckingNetwork] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthReady || user || isGuestMode) return;
+
+    const checkNetwork = async () => {
+      setIsCheckingNetwork(true);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        // Try to fetch a small Google asset to check connectivity
+        await fetch('https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg', { 
+          mode: 'no-cors', 
+          signal: controller.signal 
+        });
+        clearTimeout(timeoutId);
+      } catch (error) {
+        console.log("Network check failed, auto-enabling offline mode");
+        setIsGuestMode(true);
+        alert("检测到无法连接云端数据库（可能需要科学网络），已自动为您开启离线模式。您的数据将安全地保存在本地。");
+      } finally {
+        setIsCheckingNetwork(false);
+      }
+    };
+
+    checkNetwork();
+  }, [isAuthReady, user, isGuestMode, setIsGuestMode]);
+
   useEffect(() => {
     if (user && syncSettings.storageMode === 'cloud' && syncSettings.syncFrequency === 'daily') {
       const now = Date.now();
@@ -156,28 +184,38 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         <p className="text-gray-500 mb-8 text-center max-w-sm">
           记录点滴，理清财务。请登录以同步您的账单数据。
         </p>
-        <div className="space-y-4 w-full max-w-xs">
-          <button
-            onClick={loginWithGoogle}
-            className="w-full px-8 py-4 bg-white border border-gray-200 rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-3"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-            <span>使用 Google 账号登录</span>
-          </button>
-          
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-gray-200"></div>
-            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">或者</span>
-            <div className="flex-grow border-t border-gray-200"></div>
+        
+        {isCheckingNetwork ? (
+          <div className="flex flex-col items-center space-y-4 my-8">
+            <div className="animate-spin text-emerald-500">
+              <Wallet size={32} />
+            </div>
+            <p className="text-sm text-gray-500">正在检测网络环境...</p>
           </div>
+        ) : (
+          <div className="space-y-4 w-full max-w-xs">
+            <button
+              onClick={loginWithGoogle}
+              className="w-full px-8 py-4 bg-white border border-gray-200 rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-3"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+              <span>使用 Google 账号登录</span>
+            </button>
+            
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-gray-200"></div>
+              <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">或者</span>
+              <div className="flex-grow border-t border-gray-200"></div>
+            </div>
 
-          <button
-            onClick={() => setIsGuestMode(true)}
-            className="w-full px-8 py-4 bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-colors flex items-center justify-center"
-          >
-            <span>跳过登录 (离线模式)</span>
-          </button>
-        </div>
+            <button
+              onClick={() => setIsGuestMode(true)}
+              className="w-full px-8 py-4 bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-colors flex items-center justify-center"
+            >
+              <span>跳过登录 (离线模式)</span>
+            </button>
+          </div>
+        )}
       </div>
     );
   }

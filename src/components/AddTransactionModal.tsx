@@ -63,7 +63,7 @@ export default function AddTransactionModal({ isOpen, onClose, initialTransactio
         return sum + (tx?.amount || 0);
       }, 0);
       if (total > 0) {
-        setAmount(total.toString());
+        setAmount((Math.round(total * 100) / 100).toString());
       } else if (selectedReimbursableIds.length === 0 && !initialTransaction) {
         setAmount('');
       }
