@@ -71,7 +71,25 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [user, syncSettings.storageMode, syncSettings.syncFrequency, syncSettings.lastSyncTime, syncToCloudNow]);
 
   useEffect(() => {
+    let authResolved = false;
+
+    // Fallback timeout: If Firebase Auth takes too long to initialize (e.g. blocked by firewall)
+    const authTimeoutId = setTimeout(() => {
+      if (!authResolved) {
+        console.log("Firebase Auth timeout, auto-enabling offline mode");
+        const wasGuest = useStore.getState().isGuestMode;
+        setIsAuthReady(true);
+        useStore.getState().setIsGuestMode(true);
+        if (!wasGuest) {
+          alert("连接云端服务超时（可能需要科学网络），已自动为您开启离线模式。您的数据将安全地保存在本地。");
+        }
+      }
+    }, 3000);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      authResolved = true;
+      clearTimeout(authTimeoutId);
+
       setUser(currentUser);
       
       if (currentUser) {
