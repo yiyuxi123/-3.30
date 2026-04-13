@@ -11,8 +11,10 @@ import EditAccountModal from '../components/EditAccountModal';
 import CategoryManagementModal from '../components/CategoryManagementModal';
 import GoalModal from '../components/GoalModal';
 import SettingsModal from '../components/SettingsModal';
+import DonationModal from '../components/DonationModal';
 import { Account, SavingGoal } from '../types';
 import { format, parseISO } from 'date-fns';
+import { auth } from '../firebase';
 import {
   DndContext,
   closestCenter,
@@ -156,6 +158,7 @@ export default function Accounts() {
   const [selectedGoal, setSelectedGoal] = useState<SavingGoal | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDonationOpen, setIsDonationOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -643,14 +646,40 @@ export default function Accounts() {
           <motion.button 
             whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              import('../firebase').then(({ logout }) => logout());
-            }}
-            className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700 hover:bg-gray-50"
+            onClick={() => setIsDonationOpen(true)}
+            className="bg-white p-4 rounded-2xl shadow-sm border border-pink-100 flex flex-col items-center justify-center space-y-2 transition-all text-pink-600 hover:bg-pink-50"
           >
-            <Icons.LogOut size={24} className="text-gray-500" />
-            <span className="text-sm font-medium">退出登录</span>
+            <Icons.Heart size={24} className="text-pink-500" />
+            <span className="text-sm font-medium">赞赏支持</span>
           </motion.button>
+          {auth.currentUser ? (
+            <motion.button 
+              whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                import('../firebase').then(({ logout }) => {
+                  logout();
+                  useStore.getState().setIsGuestMode(true);
+                });
+              }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-2 transition-all text-gray-700 hover:bg-gray-50"
+            >
+              <Icons.LogOut size={24} className="text-gray-500" />
+              <span className="text-sm font-medium">退出登录</span>
+            </motion.button>
+          ) : (
+            <motion.button 
+              whileHover={{ y: -2, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                import('../firebase').then(({ loginWithGoogle }) => loginWithGoogle());
+              }}
+              className="bg-white p-4 rounded-2xl shadow-sm border border-emerald-100 flex flex-col items-center justify-center space-y-2 transition-all text-emerald-600 hover:bg-emerald-50"
+            >
+              <Icons.LogIn size={24} className="text-emerald-500" />
+              <span className="text-sm font-medium">登录同步</span>
+            </motion.button>
+          )}
         </div>
       </div>
 
@@ -660,6 +689,7 @@ export default function Accounts() {
       <GoalModal isOpen={isAddGoalOpen} onClose={() => setIsAddGoalOpen(false)} />
       <GoalModal isOpen={!!selectedGoal} onClose={() => setSelectedGoal(null)} goal={selectedGoal} />
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      {isDonationOpen && <DonationModal onClose={() => setIsDonationOpen(false)} />}
 
       {/* Restore Confirm Modal */}
       {showRestoreConfirm && (

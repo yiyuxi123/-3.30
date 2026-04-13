@@ -37,6 +37,9 @@ interface AppState {
   hasBootstrapped: boolean;
   setHasBootstrapped: (val: boolean) => void;
 
+  isGuestMode: boolean;
+  setIsGuestMode: (val: boolean) => void;
+
   // Actions
   addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, transaction: Partial<Transaction>) => void;
@@ -108,6 +111,9 @@ export const useStore = create<AppState>()(
 
         hasBootstrapped: false,
         setHasBootstrapped: (val) => set({ hasBootstrapped: val }),
+
+        isGuestMode: false,
+        setIsGuestMode: (val) => set({ isGuestMode: val }),
 
         setSyncSettings: (settings) => set((state) => ({ syncSettings: { ...state.syncSettings, ...settings } })),
         toggleShowReimbursables: () => set((state) => ({ showReimbursables: !state.showReimbursables })),
@@ -489,7 +495,8 @@ export const useStore = create<AppState>()(
         goals: state.goals,
         syncSettings: state.syncSettings,
         showReimbursables: state.showReimbursables,
-        hasBootstrapped: state.hasBootstrapped
+        hasBootstrapped: state.hasBootstrapped,
+        isGuestMode: state.isGuestMode
       }),
     }
   )

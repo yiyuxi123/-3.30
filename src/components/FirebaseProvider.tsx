@@ -29,7 +29,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [user, setUser] = useState(auth.currentUser);
 
-  const { setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals, syncSettings, syncToCloudNow } = useStore();
+  const { isGuestMode, setIsGuestMode, setAccounts, setCategories, setTransactions, setBudgets, setTemplates, setGoals, syncSettings, syncToCloudNow } = useStore();
 
   useEffect(() => {
     if (user && syncSettings.storageMode === 'cloud' && syncSettings.syncFrequency === 'daily') {
@@ -46,6 +46,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       
+      if (currentUser) {
+        useStore.getState().setIsGuestMode(false);
+      }
+
       if (currentUser && syncSettings.storageMode === 'cloud') {
         // Check if new user and bootstrap
         const userId = currentUser.uid;
@@ -142,7 +146,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   }
 
-  if (!user) {
+  if (!user && !isGuestMode) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
         <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
@@ -152,13 +156,28 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         <p className="text-gray-500 mb-8 text-center max-w-sm">
           记录点滴，理清财务。请登录以同步您的账单数据。
         </p>
-        <button
-          onClick={loginWithGoogle}
-          className="px-8 py-4 bg-white border border-gray-200 rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-3"
-        >
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
-          <span>使用 Google 账号登录</span>
-        </button>
+        <div className="space-y-4 w-full max-w-xs">
+          <button
+            onClick={loginWithGoogle}
+            className="w-full px-8 py-4 bg-white border border-gray-200 rounded-xl shadow-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center space-x-3"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-6 h-6" />
+            <span>使用 Google 账号登录</span>
+          </button>
+          
+          <div className="relative flex items-center py-2">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">或者</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+
+          <button
+            onClick={() => setIsGuestMode(true)}
+            className="w-full px-8 py-4 bg-emerald-50 border border-emerald-100 rounded-xl shadow-sm font-bold text-emerald-600 hover:bg-emerald-100 transition-colors flex items-center justify-center"
+          >
+            <span>跳过登录 (离线模式)</span>
+          </button>
+        </div>
       </div>
     );
   }
